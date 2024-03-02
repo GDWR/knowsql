@@ -1,15 +1,7 @@
 use std::{io::{BufRead, Write}, net::TcpListener, path::PathBuf};
 
 use hoard::bitcask::BitCask;
-
-
-#[derive(Debug)]
-enum Command<'a> {
-    /// https://redis.io/docs/reference/protocol-spec/#arrays
-    Array(&'a [Command<'a>]),
-    /// https://redis.io/docs/reference/protocol-spec/#bulk-strings
-    String(&'a str),
-}
+use hoard::command::Command;
 
 fn main() {
     let listener = TcpListener::bind("0.0.0.0:6379").unwrap();
