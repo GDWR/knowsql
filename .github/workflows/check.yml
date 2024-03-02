@@ -1,0 +1,15 @@
+name: check
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+      - name: Nix flake check
+        run: nix flake check .
