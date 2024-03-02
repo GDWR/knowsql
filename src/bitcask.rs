@@ -1,7 +1,7 @@
+use std::collections::HashMap;
+use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::path::PathBuf;
-use std::fs::File;
-use std::collections::HashMap;
 
 use chrono::Utc;
 
@@ -57,7 +57,7 @@ impl BitCask {
             std::fs::create_dir(&data_dir)?;
         }
 
-        Ok(BitCask { 
+        Ok(BitCask {
             data_dir: data_dir,
             active_file_id: 0,
             key_dir: HashMap::new(),
@@ -69,7 +69,8 @@ impl BitCask {
 
         let mut file = File::open(self.get_active_file()).unwrap();
 
-        file.seek(std::io::SeekFrom::Start(meta.value_position)).unwrap();
+        file.seek(std::io::SeekFrom::Start(meta.value_position))
+            .unwrap();
         let mut buf = vec![0; meta.value_size as usize];
         file.read_exact(&mut buf).unwrap();
         Some(String::from_utf8(buf).unwrap())
@@ -84,8 +85,8 @@ impl BitCask {
             key: key,
             value: value,
         };
-        
-        let e =  entry.serialize();
+
+        let e = entry.serialize();
 
         let mut file = std::fs::OpenOptions::new()
             .append(true)
@@ -95,19 +96,28 @@ impl BitCask {
         file.write_all(&e)?;
 
         let p = file.stream_position().unwrap();
-        self.key_dir.insert(key.to_string(), Key {
-            file_id: 0,
-            value_size: value.len() as u32,
-            value_position: p - entry.value_size as u64,
-            timestamp: entry.timestamp,
-        });
-        
+        self.key_dir.insert(
+            key.to_string(),
+            Key {
+                file_id: 0,
+                value_size: value.len() as u32,
+                value_position: p - entry.value_size as u64,
+                timestamp: entry.timestamp,
+            },
+        );
+
         Ok(())
     }
     /// Delete a key from the store
-    pub fn delete(&mut self, key: &str) -> Option<()> { self.key_dir.remove(key).map(|_| ()) }
+    pub fn delete(&mut self, key: &str) -> Option<()> {
+        self.key_dir.remove(key).map(|_| ())
+    }
     /// Alias for [`BitCask::list_keys()`]
-    pub fn keys(&self) -> Vec<String> { self.list_keys() }
+    pub fn keys(&self) -> Vec<String> {
+        self.list_keys()
+    }
     /// List all keys in the store
-    pub fn list_keys(&self) -> Vec<String> { self.key_dir.keys().cloned().collect() }
+    pub fn list_keys(&self) -> Vec<String> {
+        self.key_dir.keys().cloned().collect()
+    }
 }
