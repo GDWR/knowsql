@@ -17,12 +17,19 @@
         version = manifest.version;
 
         src = pkgs.lib.cleanSource ./.;
-	cargoLock.lockFile = ./Cargo.lock;
+        cargoLock.lockFile = ./Cargo.lock;
       };
     });
     devShells= forAllSystems (pkgs: {
       default = pkgs.mkShell {
-        packages = [ pkgs.cargo pkgs.rustc ];
+        RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+        packages = with pkgs; [
+          rustc
+          cargo
+          
+          clippy
+          rust-analyzer
+        ];
       };
     });
   };
