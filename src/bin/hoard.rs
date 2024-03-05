@@ -8,7 +8,9 @@ use hoard::bitcask::BitCask;
 use hoard::command::Command;
 
 fn main() {
-    let listener = TcpListener::bind("0.0.0.0:6379").unwrap();
+    let port = std::env::var("HOARD_PORT").unwrap_or("6379".to_string());
+
+    let listener = TcpListener::bind( format!("0.0.0.0:{}", port)).unwrap();
     let mut bitcask = BitCask::open(PathBuf::from("./data")).unwrap();
 
     for stream in listener.incoming() {
