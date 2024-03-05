@@ -37,8 +37,10 @@
         basic = pkgs.nixosTest {
           name = "basic";
           nodes.machine = { config, pkgs, ... }: {
-            environment.systemPackages =
-              [ packages.x86_64-linux.hoard pkgs.netcat ];
+            imports = [ nixosModules.hoard { } ];  
+            environment.systemPackages = [ pkgs.netcat ];
+
+            services.hoard.enable = true;
 
             users.users.user = {
               isNormalUser = true;
@@ -51,9 +53,6 @@
             machine.start()
             machine.wait_for_unit('default.target')
 
-            # In the future we will use a NixOSModule to start the service
-            machine.execute('hoard > /dev/console 2>&1 &')
-
             machine.wait_for_open_port(6379, 'localhost', 10)
             machine.succeed('echo "set hello world" | nc localhost 6379 | grep "OK"')
             machine.succeed('echo "get hello" | nc localhost 6379 | grep "world"')
@@ -63,7 +62,8 @@
           name = "basicRemote";
           nodes = {
             server = { config, pkgs, ... }: {
-              environment.systemPackages = [ packages.x86_64-linux.hoard ];
+              imports = [ nixosModules.hoard { } ];  
+              services.hoard.enable = true;
               networking.firewall = {
                 enable = true;
                 allowedTCPPorts = [ 6379 ];
@@ -78,14 +78,31 @@
           testScript = ''
             start_all()
 
-            # In the future we will use a NixOSModule to start the service
-            server.execute('hoard > /dev/console 2>&1 &')
-
             client.wait_for_open_port(6379, 'server', 10)
             client.succeed('echo "set hello world" | nc server 6379 | grep "OK"')
             client.succeed('echo "get hello" | nc server 6379 | grep "world"')
           '';
         };
       });
+
+      nixosModules = {
+        hoard = { config, lib, pkgs, ... }: {
+          options = {
+            services.hoard.enable = lib.mkEnableOption "hoard";
+          };
+
+          config = lib.mkIf config.services.hoard.enable {
+            systemd.services.hoard = {
+              description = "Hoard";
+              after = [ "network.target" ];
+              wantedBy = [ "multi-user.target" ];
+              serviceConfig = {
+                ExecStart = "${packages.x86_64-linux.hoard}/bin/hoard";
+                Restart = "always";
+              };
+            };
+          };
+        };
+      };
     };
 }
