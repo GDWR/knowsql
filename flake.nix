@@ -25,7 +25,6 @@
           packages = with pkgs; [
             rustc
             cargo
-
             clippy
             rustfmt
             rust-analyzer
@@ -118,6 +117,11 @@
           options = {
             services.hoard = {
               enable = lib.mkEnableOption "hoard";
+              data = lib.mkOption {
+                type = lib.types.path;
+                default = "/etc/hoard";
+                description = "The directory where hoard will store its data.";
+              };
               port = lib.mkOption {
                 type = lib.types.int;
                 default = 6379;
@@ -127,11 +131,14 @@
           };
 
           config = lib.mkIf config.services.hoard.enable {
+            environment.etc."hoard/config.toml".text = "";
+
             systemd.services.hoard = {
               description = "Hoard";
               after = [ "network.target" ];
               wantedBy = [ "multi-user.target" ];
               environment.HOARD_PORT = "${toString config.services.hoard.port}";
+              environment.HOARD_DATA_DIR = config.services.hoard.data;
               serviceConfig = {
                 ExecStart = "${packages.x86_64-linux.hoard}/bin/hoard";
                 Restart = "always";
