@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 knowsql_bitcask = { workspace = true }
+knowsql_parser = { workspace = true }
 
 chrono = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

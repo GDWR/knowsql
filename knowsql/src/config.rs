@@ -1,9 +1,8 @@
-use std::fs::read_to_string;
 use serde::Deserialize;
+use std::fs::read_to_string;
 use toml;
 
 const DEFAULT_CONFIG_PATH: &'static str = "/etc/knowsql/config.toml";
-
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -32,4 +31,3 @@ pub fn get_config() -> Config {
         return Config::default();
     }
 }
-

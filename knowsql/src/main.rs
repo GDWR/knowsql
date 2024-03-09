@@ -1,7 +1,6 @@
 mod config;
 
 use std::{
-    fs,
     io::{BufRead, Write},
     net::TcpListener,
     path::PathBuf,
@@ -9,13 +8,7 @@ use std::{
 
 use knowsql_bitcask::BitCask;
 
-
-#[derive(Debug)]
-pub enum Command<'a> {
-    Array(&'a [Command<'a>]),
-    String(&'a str),
-}
-
+use knowsql_parser::{parse_command, Command};
 
 fn main() {
     let config = config::get_config();
@@ -32,26 +25,20 @@ fn main() {
         let mut buf = String::new();
         bufreader.read_line(&mut buf).unwrap();
 
-        let s: Vec<Command> = buf
-            .split_whitespace()
-            .map(|x| Command::String(x))
-            .collect::<Vec<Command>>();
-
-        let command = Command::Array(&s);
-
-        match command {
-            Command::Array(
-                [Command::String("set"), Command::String(key), Command::String(value)],
-            ) => {
-                bitcask.put(key, value).unwrap();
-                stream.write_all(b"OK\r\n").unwrap();
+        if let Some(command) = parse_command(&buf) {
+            match command {
+                Command::Get(key) => {
+                    if let Some(value) = bitcask.get(key) {
+                        stream.write_all(value.as_bytes()).unwrap();
+                    }
+                }
+                Command::Set(key, value) => match bitcask.put(key, value) {
+                    Ok(_) => stream.write_all(b"OK").unwrap(),
+                    Err(_) => stream.write_all(b"Error").unwrap(),
+                },
             }
-            Command::Array([Command::String("get"), Command::String(key)]) => {
-                let value = bitcask.get(key).unwrap();
-                stream.write_all(value.as_bytes()).unwrap();
-                stream.write_all(b"\r\n").unwrap();
-            }
-            c => println!("Invalid command: {} {:?}", buf, c),
+        } else {
+            stream.write_all(b"Invalid command").unwrap();
         }
     }
 }

@@ -1,9 +1,9 @@
 [package]
-name = "knowsql_bitcask"
+name = "knowsql_parser"
 edition = "2021"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
 
 [dependencies]
-chrono = { workspace = true }
+nom = { workspace = true }
