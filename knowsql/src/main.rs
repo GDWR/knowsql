@@ -1,3 +1,5 @@
+mod config;
+
 use std::{
     fs,
     io::{BufRead, Write},
@@ -6,9 +8,7 @@ use std::{
 };
 
 use knowsql_bitcask::BitCask;
-use serde::Deserialize;
 
-const DEFAULT_CONFIG_PATH: &'static str = "/etc/knowsql/config.toml";
 
 #[derive(Debug)]
 pub enum Command<'a> {
@@ -16,35 +16,9 @@ pub enum Command<'a> {
     String(&'a str),
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Config {
-    data_dir: String,
-    port: usize,
-}
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            data_dir: "./data".to_string(),
-            port: 2288,
-        }
-    }
-}
-
-/// Use environment variable KNOWSQL_CONFIG or DEFAULT_CONFIG_PATH to load the config
-///   if it doesn't exist, use default config
-fn get_config() -> Config {
-    let config_path = std::env::var("KNOWSQL_CONFIG").unwrap_or(DEFAULT_CONFIG_PATH.to_string());
-
-    if let Ok(config) = fs::read_to_string(config_path) {
-        return toml::from_str(&config).unwrap();
-    } else {
-        println!("Missing configuration, using defaults");
-        return Config::default();
-    }
-}
 
 fn main() {
-    let config = get_config();
+    let config = config::get_config();
 
     println!("Starting server on port {}", config.port);
 
