@@ -8,14 +8,15 @@
       formatter = forAllSystems (pkgs: pkgs.nixfmt);
       packages = forAllSystems (pkgs: rec {
         default = knowsql;
-        knowsql = let manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
-        in pkgs.rustPlatform.buildRustPackage {
-          pname = "knowsql";
-          version = manifest.version;
+        knowsql =
+          let manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
+          in pkgs.rustPlatform.buildRustPackage {
+            pname = "knowsql";
+            version = manifest.version;
 
-          src = pkgs.lib.cleanSource ./.;
-          cargoLock.lockFile = ./Cargo.lock;
-        };
+            src = pkgs.lib.cleanSource ./.;
+            cargoLock.lockFile = ./Cargo.lock;
+          };
       });
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {

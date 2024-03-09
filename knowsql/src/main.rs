@@ -1,4 +1,3 @@
-
 use std::{
     fs,
     io::{BufRead, Write},
@@ -8,7 +7,6 @@ use std::{
 
 use knowsql_bitcask::BitCask;
 use serde::Deserialize;
-
 
 const DEFAULT_CONFIG_PATH: &'static str = "/etc/knowsql/config.toml";
 
