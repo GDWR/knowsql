@@ -8,21 +8,10 @@
       formatter = forAllSystems (pkgs: pkgs.nixfmt);
       packages = forAllSystems (pkgs: rec {
         default = knowsql;
-        knowsql =
-          let manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
-          in pkgs.rustPlatform.buildRustPackage {
-            pname = "knowsql";
-            version = manifest.version;
-
-            src = pkgs.lib.cleanSource ./.;
-            cargoLock.lockFile = ./Cargo.lock;
-          };
+        knowsql = pkgs.callPackage ./default.nix { };
       });
       devShells = forAllSystems (pkgs: {
-        default = pkgs.mkShell {
-          RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-          packages = with pkgs; [ rustc cargo clippy rustfmt rust-analyzer ];
-        };
+        default = pkgs.callPackage ./shell.nix { };
       });
       checks = forAllSystems (pkgs: {
         # https://nixos.org/manual/nixos/stable/index.html#sec-nixos-tests
