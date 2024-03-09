@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{BufRead, Write},
     net::TcpListener,
     path::PathBuf,
@@ -6,13 +7,44 @@ use std::{
 
 use knowsql::bitcask::BitCask;
 use knowsql::command::Command;
+use serde::Deserialize;
+
+const DEFAULT_CONFIG_PATH: &'static str = "/etc/knowsql/config.toml";
+
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    data_dir: String,
+    port: usize,
+}
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            data_dir: "./data".to_string(),
+            port: 2288,
+        }
+    }
+}
+
+/// Use environment variable KNOWSQL_CONFIG or DEFAULT_CONFIG_PATH to load the config
+///   if it doesn't exist, use default config
+fn get_config() -> Config {
+    let config_path = std::env::var("KNOWSQL_CONFIG").unwrap_or(DEFAULT_CONFIG_PATH.to_string());
+
+    if let Ok(config) = fs::read_to_string(config_path) {
+        return toml::from_str(&config).unwrap();
+    } else {
+        println!("Missing configuration, using defaults");
+        return Config::default();
+    }
+}
 
 fn main() {
-    let port = std::env::var("KNOWSQL_PORT").unwrap_or("6379".to_string());
-    let data_dir = std::env::var("KNOWSQL_DATA_DIR").unwrap_or("./data".to_string());
+    let config = get_config();
 
-    let listener = TcpListener::bind( format!("0.0.0.0:{}", port)).unwrap();
-    let mut bitcask = BitCask::open(PathBuf::from(data_dir)).unwrap();
+    println!("Starting server on port {}", config.port);
+
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).unwrap();
+    let mut bitcask = BitCask::open(PathBuf::from(config.data_dir)).unwrap();
 
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();

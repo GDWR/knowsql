@@ -20,13 +20,7 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-          packages = with pkgs; [
-            rustc
-            cargo
-            clippy
-            rustfmt
-            rust-analyzer
-          ];
+          packages = with pkgs; [ rustc cargo clippy rustfmt rust-analyzer ];
         };
       });
       checks = forAllSystems (pkgs: {
@@ -34,7 +28,7 @@
         basic = pkgs.nixosTest {
           name = "basic";
           nodes.machine = { config, pkgs, ... }: {
-            imports = [ nixosModules.knowsql { } ];  
+            imports = [ nixosModules.knowsql { } ];
             environment.systemPackages = [ pkgs.netcat ];
 
             services.knowsql.enable = true;
@@ -50,20 +44,20 @@
             machine.start()
             machine.wait_for_unit('default.target')
 
-            machine.wait_for_open_port(6379, 'localhost', 10)
-            machine.succeed('echo "set hello world" | nc localhost 6379 | grep "OK"')
-            machine.succeed('echo "get hello" | nc localhost 6379 | grep "world"')
+            machine.wait_for_open_port(2288, 'localhost', 10)
+            machine.succeed('echo "set hello world" | nc localhost 2288 | grep "OK"')
+            machine.succeed('echo "get hello" | nc localhost 2288 | grep "world"')
           '';
         };
         basicRemote = pkgs.nixosTest {
           name = "basicRemote";
           nodes = {
             server = { config, pkgs, ... }: {
-              imports = [ nixosModules.knowsql { } ];  
+              imports = [ nixosModules.knowsql { } ];
               services.knowsql.enable = true;
               networking.firewall = {
                 enable = true;
-                allowedTCPPorts = [ 6379 ];
+                allowedTCPPorts = [ 2288 ];
               };
               system.stateVersion = "23.11";
             };
@@ -75,16 +69,16 @@
           testScript = ''
             start_all()
 
-            client.wait_for_open_port(6379, 'server', 10)
-            client.succeed('echo "set hello world" | nc server 6379 | grep "OK"')
-            client.succeed('echo "get hello" | nc server 6379 | grep "world"')
+            client.wait_for_open_port(2288, 'server', 10)
+            client.succeed('echo "set hello world" | nc server 2288 | grep "OK"')
+            client.succeed('echo "get hello" | nc server 2288 | grep "world"')
           '';
         };
         basicRemoteOver9000 = pkgs.nixosTest {
           name = "basicRemoteOver9000";
           nodes = {
             server = { config, pkgs, ... }: {
-              imports = [ nixosModules.knowsql { } ];  
+              imports = [ nixosModules.knowsql { } ];
               services.knowsql = {
                 enable = true;
                 port = 9001;
@@ -111,39 +105,45 @@
       });
 
       nixosModules = {
-        knowsql = { config, lib, pkgs, ... }: {
-          options = {
-            services.knowsql = {
-              enable = lib.mkEnableOption "knowsql";
-              data = lib.mkOption {
-                type = lib.types.path;
-                default = "/etc/knowsql";
-                description = "The directory where knowsql will store its data.";
+        knowsql = { config, lib, pkgs, ... }:
+          with lib;
+          let settingsFormat = pkgs.formats.toml { };
+          in {
+            options = {
+              services.knowsql = {
+                enable = mkEnableOption "knowsql";
+                data_dir = lib.mkOption {
+                  type = lib.types.path;
+                  default = "/etc/knowsql/data";
+                  description =
+                    "The directory where knowsql will store its data.";
+                };
+                port = lib.mkOption {
+                  type = lib.types.int;
+                  default = 2288;
+                  description = "The port on which knowsql will listen.";
+                };
               };
-              port = lib.mkOption {
-                type = lib.types.int;
-                default = 6379;
-                description = "The port on which knowsql will listen.";
+            };
+
+            config = mkIf config.services.knowsql.enable {
+              environment.etc."knowsql/config.toml".source =
+                settingsFormat.generate "config.toml" {
+                  port = config.services.knowsql.port;
+                  data_dir = config.services.knowsql.data_dir;
+                };
+
+              systemd.services.knowsql = {
+                description = "Knowsql";
+                after = [ "network.target" ];
+                wantedBy = [ "multi-user.target" ];
+                serviceConfig = {
+                  ExecStart = "${packages.x86_64-linux.knowsql}/bin/knowsql";
+                  Restart = "always";
+                };
               };
             };
           };
-
-          config = lib.mkIf config.services.knowsql.enable {
-            environment.etc."knowsql/config.toml".text = "";
-
-            systemd.services.knowsql = {
-              description = "Knowsql";
-              after = [ "network.target" ];
-              wantedBy = [ "multi-user.target" ];
-              environment.KNOWSQL_PORT = "${toString config.services.knowsql.port}";
-              environment.KNOWSQL_DATA_DIR = config.services.knowsql.data;
-              serviceConfig = {
-                ExecStart = "${packages.x86_64-linux.knowsql}/bin/knowsql";
-                Restart = "always";
-              };
-            };
-          };
-        };
       };
     };
 }
