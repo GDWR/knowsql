@@ -128,7 +128,7 @@
                 after = [ "network.target" ];
                 wantedBy = [ "multi-user.target" ];
                 serviceConfig = {
-                  ExecStart = "${packages.x86_64-linux.knowsql}/bin/knowsql";
+                  ExecStart = "${packages.${pkgs.system}.knowsql}/bin/knowsql";
                   Restart = "always";
                 };
               };
