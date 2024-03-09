@@ -4,6 +4,11 @@ members = [
     "knowsql",
 ]
 
+[workspace.package]
+version = "0.0.1"
+authors = ["gdwr <gregory.dwr@gmail.com>"]
+documentation = "https://github.com/gdwr/knowsql"
+
 [workspace.dependencies]
 chrono = "0.4.34"
 serde = { version = "1.0.197", features = ["derive"] }
