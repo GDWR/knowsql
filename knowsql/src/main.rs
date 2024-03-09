@@ -1,3 +1,4 @@
+
 use std::{
     fs,
     io::{BufRead, Write},
@@ -6,10 +7,16 @@ use std::{
 };
 
 use knowsql_bitcask::BitCask;
-use knowsql::command::Command;
 use serde::Deserialize;
 
+
 const DEFAULT_CONFIG_PATH: &'static str = "/etc/knowsql/config.toml";
+
+#[derive(Debug)]
+pub enum Command<'a> {
+    Array(&'a [Command<'a>]),
+    String(&'a str),
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
