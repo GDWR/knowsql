@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "knowsql",
+    "knowsql", "crates/knowsql_bitcask",
 ]
 
 [workspace.package]
@@ -10,6 +10,8 @@ authors = ["gdwr <gregory.dwr@gmail.com>"]
 documentation = "https://github.com/gdwr/knowsql"
 
 [workspace.dependencies]
+knowsql_bitcask = { path = "crates/knowsql_bitcask" }
+
 chrono = "0.4.34"
 serde = { version = "1.0.197", features = ["derive"] }
 toml = "0.8.10"

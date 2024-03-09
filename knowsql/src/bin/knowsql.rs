@@ -5,7 +5,7 @@ use std::{
     path::PathBuf,
 };
 
-use knowsql::bitcask::BitCask;
+use knowsql_bitcask::BitCask;
 use knowsql::command::Command;
 use serde::Deserialize;
 
