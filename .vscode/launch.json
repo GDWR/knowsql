@@ -5,17 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug executable 'hoard'",
+            "name": "Debug executable 'knowsql'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=hoard",
-                    "--package=hoard"
+                    "--bin=knowsql",
+                    "--package=knowsql"
                 ],
                 "filter": {
-                    "name": "hoard",
+                    "name": "knowsql",
                     "kind": "bin"
                 }
             } ,

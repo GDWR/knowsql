@@ -1,6 +1,4 @@
 {
-  description = "A Rust implementation of bitcask.";
-
   outputs = { self, nixpkgs, ... }:
     let
       forAllSystems = function:
@@ -9,8 +7,8 @@
     in rec {
       formatter = forAllSystems (pkgs: pkgs.nixfmt);
       packages = forAllSystems (pkgs: rec {
-        default = hoard;
-        hoard = let manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
+        default = knowsql;
+        knowsql = let manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
         in pkgs.rustPlatform.buildRustPackage rec {
           pname = manifest.name;
           version = manifest.version;
@@ -36,10 +34,10 @@
         basic = pkgs.nixosTest {
           name = "basic";
           nodes.machine = { config, pkgs, ... }: {
-            imports = [ nixosModules.hoard { } ];  
+            imports = [ nixosModules.knowsql { } ];  
             environment.systemPackages = [ pkgs.netcat ];
 
-            services.hoard.enable = true;
+            services.knowsql.enable = true;
 
             users.users.user = {
               isNormalUser = true;
@@ -61,8 +59,8 @@
           name = "basicRemote";
           nodes = {
             server = { config, pkgs, ... }: {
-              imports = [ nixosModules.hoard { } ];  
-              services.hoard.enable = true;
+              imports = [ nixosModules.knowsql { } ];  
+              services.knowsql.enable = true;
               networking.firewall = {
                 enable = true;
                 allowedTCPPorts = [ 6379 ];
@@ -86,8 +84,8 @@
           name = "basicRemoteOver9000";
           nodes = {
             server = { config, pkgs, ... }: {
-              imports = [ nixosModules.hoard { } ];  
-              services.hoard = {
+              imports = [ nixosModules.knowsql { } ];  
+              services.knowsql = {
                 enable = true;
                 port = 9001;
               };
@@ -113,34 +111,34 @@
       });
 
       nixosModules = {
-        hoard = { config, lib, pkgs, ... }: {
+        knowsql = { config, lib, pkgs, ... }: {
           options = {
-            services.hoard = {
-              enable = lib.mkEnableOption "hoard";
+            services.knowsql = {
+              enable = lib.mkEnableOption "knowsql";
               data = lib.mkOption {
                 type = lib.types.path;
-                default = "/etc/hoard";
-                description = "The directory where hoard will store its data.";
+                default = "/etc/knowsql";
+                description = "The directory where knowsql will store its data.";
               };
               port = lib.mkOption {
                 type = lib.types.int;
                 default = 6379;
-                description = "The port on which hoard will listen.";
+                description = "The port on which knowsql will listen.";
               };
             };
           };
 
-          config = lib.mkIf config.services.hoard.enable {
-            environment.etc."hoard/config.toml".text = "";
+          config = lib.mkIf config.services.knowsql.enable {
+            environment.etc."knowsql/config.toml".text = "";
 
-            systemd.services.hoard = {
-              description = "Hoard";
+            systemd.services.knowsql = {
+              description = "Knowsql";
               after = [ "network.target" ];
               wantedBy = [ "multi-user.target" ];
-              environment.HOARD_PORT = "${toString config.services.hoard.port}";
-              environment.HOARD_DATA_DIR = config.services.hoard.data;
+              environment.KNOWSQL_PORT = "${toString config.services.knowsql.port}";
+              environment.KNOWSQL_DATA_DIR = config.services.knowsql.data;
               serviceConfig = {
-                ExecStart = "${packages.x86_64-linux.hoard}/bin/hoard";
+                ExecStart = "${packages.x86_64-linux.knowsql}/bin/knowsql";
                 Restart = "always";
               };
             };

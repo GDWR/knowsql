@@ -4,12 +4,12 @@ use std::{
     path::PathBuf,
 };
 
-use hoard::bitcask::BitCask;
-use hoard::command::Command;
+use knowsql::bitcask::BitCask;
+use knowsql::command::Command;
 
 fn main() {
-    let port = std::env::var("HOARD_PORT").unwrap_or("6379".to_string());
-    let data_dir = std::env::var("HOARD_DATA_DIR").unwrap_or("./data".to_string());
+    let port = std::env::var("KNOWSQL_PORT").unwrap_or("6379".to_string());
+    let data_dir = std::env::var("KNOWSQL_DATA_DIR").unwrap_or("./data".to_string());
 
     let listener = TcpListener::bind( format!("0.0.0.0:{}", port)).unwrap();
     let mut bitcask = BitCask::open(PathBuf::from(data_dir)).unwrap();
