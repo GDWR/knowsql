@@ -47,6 +47,10 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     Ok(_) => stream.write_all(b"OK\n").unwrap(),
                     Err(_) => stream.write_all(b"ERR\n").unwrap(),
                 },
+                Command::List => {
+                    let keys = bitcask.lock().unwrap().list_keys().join(" ");
+                    stream.write_all((keys + "\n").as_bytes()).unwrap();
+                }
                 Command::Exit => {
                     stream.write_all(b"BYE\n").unwrap();
                     break;

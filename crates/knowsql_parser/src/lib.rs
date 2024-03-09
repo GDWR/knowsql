@@ -8,6 +8,7 @@ use nom::{
 pub enum Command<'a> {
     Get(&'a str),
     Set(&'a str, &'a str),
+    List,
     Exit,
 }
 
@@ -25,13 +26,18 @@ fn parse_get(input: &str) -> IResult<&str, Command> {
     Ok((input, Command::Get(key)))
 }
 
+fn parse_list(input: &str) -> IResult<&str, Command> {
+    let (input, _) = tag_no_case("list")(input)?;
+    Ok((input, Command::List))
+}
+
 fn parse_exit(input: &str) -> IResult<&str, Command> {
     let (input, _) = tag_no_case("exit")(input)?;
     Ok((input, Command::Exit))
 }
 
 pub fn parse_command(input: &str) -> Option<Command> {
-    match alt((parse_get, parse_set, parse_exit))(input) {
+    match alt((parse_get, parse_set, parse_list, parse_exit))(input) {
         Ok((_, command)) => Some(command),
         _ => None,
     }
@@ -55,6 +61,11 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_list() {
+        assert_eq!(parse_list("list"), Ok(("", Command::List)));
+    }
+
+    #[test]
     fn test_parse_exit() {
         assert_eq!(parse_exit("exit"), Ok(("", Command::Exit)));
     }
@@ -66,6 +77,7 @@ mod tests {
             parse_command("set key value"),
             Some(Command::Set("key", "value"))
         );
+        assert_eq!(parse_command("list"), Some(Command::List));
         assert_eq!(parse_command("exit"), Some(Command::Exit));
         assert_eq!(parse_command("invalid"), None);
     }
@@ -77,6 +89,7 @@ mod tests {
             parse_command("SeT key value"),
             Some(Command::Set("key", "value"))
         );
+        assert_eq!(parse_command("LIST"), Some(Command::List));
         assert_eq!(parse_command("eXIT"), Some(Command::Exit));
     }
 }
