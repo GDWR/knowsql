@@ -1,7 +1,5 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{tag, tag_no_case},
-    IResult,
+    branch::alt, bytes::complete::{tag, tag_no_case}, character::complete::alpha1, IResult
 };
 
 #[derive(Debug, PartialEq)]
@@ -14,15 +12,15 @@ pub enum Command<'a> {
 
 fn parse_set(input: &str) -> IResult<&str, Command> {
     let (input, _) = tag_no_case("set ")(input)?;
-    let (input, key) = nom::character::complete::alpha1(input)?;
+    let (input, key) = alpha1(input)?;
     let (input, _) = tag(" ")(input)?;
-    let (input, value) = nom::character::complete::alpha1(input)?;
+    let (input, value) = alpha1(input)?;
     Ok((input, Command::Set(key, value)))
 }
 
 fn parse_get(input: &str) -> IResult<&str, Command> {
     let (input, _) = tag_no_case("get ")(input)?;
-    let (input, key) = nom::character::complete::alpha1(input)?;
+    let (input, key) = alpha1(input)?;
     Ok((input, Command::Get(key)))
 }
 
