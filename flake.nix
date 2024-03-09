@@ -45,9 +45,9 @@
             machine.start()
             machine.wait_for_unit('default.target')
 
-            machine.wait_for_open_port(2288, 'localhost', 10)
-            machine.succeed('echo "set hello world" | nc localhost 2288 | grep "OK"')
-            machine.succeed('echo "get hello" | nc localhost 2288 | grep "world"')
+            machine.wait_for_open_port(2288, 'localhost', timeout=10)
+            machine.succeed('echo "set hello world" | nc localhost 2288 | grep "OK"', timeout=10)
+            machine.succeed('echo "get hello" | nc localhost 2288 | grep "world"', timeout=10)
           '';
         };
         basicRemote = pkgs.nixosTest {
@@ -70,9 +70,9 @@
           testScript = ''
             start_all()
 
-            client.wait_for_open_port(2288, 'server', 10)
-            client.succeed('echo "set hello world" | nc server 2288 | grep "OK"')
-            client.succeed('echo "get hello" | nc server 2288 | grep "world"')
+            client.wait_for_open_port(2288, 'server', timeout=10)
+            client.succeed('echo "set hello world" | nc server 2288 | grep "OK"', timeout=10)
+            client.succeed('echo "get hello" | nc server 2288 | grep "world"', timeout=10)
           '';
         };
         basicRemoteOver9000 = pkgs.nixosTest {
@@ -98,9 +98,9 @@
           testScript = ''
             start_all()
 
-            client.wait_for_open_port(9001, 'server', 10)
-            client.succeed('echo "set hello world" | nc server 9001 | grep "OK"')
-            client.succeed('echo "get hello" | nc server 9001 | grep "world"')
+            client.wait_for_open_port(9001, 'server', timeout=10)
+            client.succeed('echo "set hello world" | nc server 9001 | grep "OK"', timeout=10)
+            client.succeed('echo "get hello" | nc server 9001 | grep "world"', timeout=10)
           '';
         };
       });
