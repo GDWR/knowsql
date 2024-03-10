@@ -1,0 +1,6 @@
+[book]
+title = "knowsql"
+authors = ["GDWR <gregory.dwr@gmail.com>"]
+language = "en"
+multilingual = false
+src = "src"

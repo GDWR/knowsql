@@ -7,5 +7,7 @@ on:
 jobs:
   check:
     uses: ./.github/workflows/check.yml
+
   build:
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/build_binary.yml
+    needs: check

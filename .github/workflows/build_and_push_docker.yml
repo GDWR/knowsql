@@ -1,0 +1,42 @@
+name: build and deploy docker 
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build_docker_image:
+    name: build docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install Nix
+        uses: cachix/install-nix-action@v26
+      - name: build docker image
+        run: nix build .#dockerImage
+      - name: upload docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker_image
+          path: result
+
+  push_docker_image:
+    name: push docker image
+    runs-on: ubuntu-latest
+    needs: build_docker_image
+    steps:
+      - name: download docker_image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker_image
+          path: docker_image
+      - name: login to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: load docker build
+        run: docker load -i ${{ github.workspace }}/docker_image/result
+      - name: push docker image to ghcr
+        run: docker push ghcr.io/gdwr/knowsql:${{ github.ref }}

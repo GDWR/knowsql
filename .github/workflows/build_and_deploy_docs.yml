@@ -1,0 +1,49 @@
+name: build and deploy docs 
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build_docs:
+    name: build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install Nix
+        uses: cachix/install-nix-action@v26
+      - name: build docs
+        run: nix build .#docs
+      - name: upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: result
+
+  deploy_docs:
+    name: deploy docs
+    runs-on: ubuntu-latest
+    needs: build_docs
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: download docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs
+          path: docs
+      - name: setup pages
+        uses: actions/configure-pages@v4
+      - name: upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: deploy to github pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,20 @@
+name: build binary
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build_binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install Nix
+        uses: cachix/install-nix-action@v26
+      - name: nix build .#knowsql
+        run: nix build .#knowsql
+      - name: upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowsql
+          path: result/bin/knowsql

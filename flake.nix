@@ -21,6 +21,16 @@
             Entrypoint = [ "${knowsql}/bin/knowsql" ];
           };
         };
+        docs = pkgs.stdenv.mkDerivation {
+          name = "knowsql-docs";
+          src = ./.;
+
+          buildInputs = [ pkgs.mdbook ];
+          buildPhase = ''
+            cd ./docs
+            mdbook build --dest-dir $out
+          '';
+        };
       });
       devShells = forAllSystems (pkgs: {
         default = pkgs.callPackage ./shell.nix { };

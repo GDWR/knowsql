@@ -2,6 +2,7 @@ name: check
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   check:
@@ -10,6 +11,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: install Nix
-        uses: cachix/install-nix-action@v25
+        uses: cachix/install-nix-action@v26
       - name: nix flake check
         run: nix flake check .
