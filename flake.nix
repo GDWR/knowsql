@@ -9,6 +9,18 @@
       packages = forAllSystems (pkgs: rec {
         default = knowsql;
         knowsql = pkgs.callPackage ./default.nix { };
+        docker = pkgs.dockerTools.buildImage {
+          name = "knowsql";
+          tag = knowsql.version;
+          runAsRoot = ''
+            #!${pkgs.stdenv.shell}
+            mkdir -p /etc/knowsql
+            printf 'port = 2288\ndata_dir = "/etc/knowsql/data"' > /etc/knowsql/config.toml
+          '';
+          config = {
+            Entrypoint = [ "${knowsql}/bin/knowsql" ];
+          };
+        };
       });
       devShells = forAllSystems (pkgs: {
         default = pkgs.callPackage ./shell.nix { };
