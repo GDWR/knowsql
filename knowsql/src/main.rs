@@ -9,7 +9,7 @@ use std::{
 
 use knowsql_bitcask::BitCask;
 
-use knowsql_parser::{parse_command, Command};
+use knowsql_parser::{parse_command, Command, KeyValue};
 
 fn main() {
     let config = config::get_config();
@@ -43,10 +43,12 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     Some(value) => stream.write_all((value + "\n").as_bytes()).unwrap(),
                     None => stream.write_all(b"NIL\n").unwrap(),
                 },
-                Command::Set(key, value) => match bitcask.lock().unwrap().put(key, value) {
-                    Ok(_) => stream.write_all(b"OK\n").unwrap(),
-                    Err(_) => stream.write_all(b"ERR\n").unwrap(),
-                },
+                Command::Set(KeyValue { key, value }) => {
+                    match bitcask.lock().unwrap().put(key, value) {
+                        Ok(_) => stream.write_all(b"OK\n").unwrap(),
+                        Err(_) => stream.write_all(b"ERR\n").unwrap(),
+                    }
+                }
                 Command::List => {
                     let keys = bitcask.lock().unwrap().list_keys().join(" ");
                     stream.write_all((keys + "\n").as_bytes()).unwrap();

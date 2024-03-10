@@ -1,14 +1,20 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case},
-    character::complete::{alpha1, alphanumeric1},
+    character::complete::alphanumeric1,
     IResult,
 };
 
 #[derive(Debug, PartialEq)]
+pub struct KeyValue<'a> {
+    pub key: &'a str,
+    pub value: &'a str,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Command<'a> {
     Get(&'a str),
-    Set(&'a str, &'a str),
+    Set(KeyValue<'a>),
     Increment(&'a str),
     List,
     Exit,
@@ -27,7 +33,7 @@ fn parse_set(input: &str) -> IResult<&str, Command> {
     let (input, key) = parse_key(input)?;
     let (input, _) = tag(" ")(input)?;
     let (input, value) = parse_value(input)?;
-    Ok((input, Command::Set(key, value)))
+    Ok((input, Command::Set(KeyValue { key, value })))
 }
 
 fn parse_get(input: &str) -> IResult<&str, Command> {
@@ -80,7 +86,13 @@ mod tests {
     fn test_parse_set() {
         assert_eq!(
             parse_set("set key value"),
-            Ok(("", Command::Set("key", "value")))
+            Ok((
+                "",
+                Command::Set(KeyValue {
+                    key: "key",
+                    value: "value"
+                })
+            ))
         );
     }
 
@@ -107,7 +119,10 @@ mod tests {
         assert_eq!(parse_command("get key"), Some(Command::Get("key")));
         assert_eq!(
             parse_command("set key value"),
-            Some(Command::Set("key", "value"))
+            Some(Command::Set(KeyValue {
+                key: "key",
+                value: "value"
+            }))
         );
         assert_eq!(parse_command("incr key"), Some(Command::Increment("key")));
         assert_eq!(parse_command("list"), Some(Command::List));
@@ -120,7 +135,10 @@ mod tests {
         assert_eq!(parse_command("GEt key"), Some(Command::Get("key")));
         assert_eq!(
             parse_command("SeT key value"),
-            Some(Command::Set("key", "value"))
+            Some(Command::Set(KeyValue {
+                key: "key",
+                value: "value"
+            }))
         );
         assert_eq!(parse_command("LIST"), Some(Command::List));
         assert_eq!(parse_command("eXIT"), Some(Command::Exit));
