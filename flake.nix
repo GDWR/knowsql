@@ -9,7 +9,7 @@
       packages = forAllSystems (pkgs: rec {
         default = knowsql;
         knowsql = pkgs.callPackage ./default.nix { };
-        docker = pkgs.dockerTools.buildImage {
+        dockerImage = pkgs.dockerTools.buildImage {
           name = "knowsql";
           tag = knowsql.version;
           runAsRoot = ''

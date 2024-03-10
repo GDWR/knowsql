@@ -1,0 +1,34 @@
+name: build 
+
+on:
+  workflow_call:
+
+jobs:
+  build_binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install Nix
+        uses: cachix/install-nix-action@v25
+      - name: nix build .
+        run: nix build .
+      - name: upload binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: knowsql
+          path: result/bin/knowsql
+
+  build_docker:
+    name: build docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install Nix
+        uses: cachix/install-nix-action@v25
+      - name: build docker image
+        run: nix build .#dockerImage
+      - name: upload docker image
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-image
+          path: result
