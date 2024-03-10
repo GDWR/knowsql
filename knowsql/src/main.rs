@@ -39,10 +39,6 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
 
         if let Some(command) = parse_command(&buf) {
             match command {
-                Command::Get(key) => match bitcask.lock().unwrap().get(key) {
-                    Some(value) => stream.write_all((value + "\n").as_bytes()).unwrap(),
-                    None => stream.write_all(b"NIL\n").unwrap(),
-                },
                 Command::Set(KeyValue { key, value }) => {
                     match bitcask.lock().unwrap().put(key, value) {
                         Ok(_) => stream.write_all(b"OK\n").unwrap(),
@@ -55,6 +51,26 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                         cask.put(kv.key, kv.value).unwrap();
                     }
                     stream.write_all(b"OK\n").unwrap();
+                }
+                Command::Get(key) => match bitcask.lock().unwrap().get(key) {
+                    Some(value) => stream.write_all((value + "\n").as_bytes()).unwrap(),
+                    None => stream.write_all(b"NIL\n").unwrap(),
+                },
+                Command::MGet(keys) => {
+                    let mut cask = bitcask.lock().unwrap();
+
+                    for (i, key) in keys.iter().enumerate() {
+                        if i > 0 {
+                            stream.write(" ".as_bytes()).unwrap();
+                        }
+
+                        if let Some(value) = cask.get(&key) {
+                            stream.write(value.as_bytes()).unwrap();
+                        } else {
+                            stream.write("NIL".as_bytes()).unwrap();
+                        }
+                    }
+                    stream.write("\n".as_bytes()).unwrap();
                 }
                 Command::List => {
                     let keys = bitcask.lock().unwrap().list_keys().join(" ");

@@ -16,6 +16,7 @@ pub struct KeyValue<'a> {
 #[derive(Debug, PartialEq)]
 pub enum Command<'a> {
     Get(&'a str),
+    MGet(Vec<&'a str>),
     Set(KeyValue<'a>),
     MSet(Vec<KeyValue<'a>>),
     Increment(&'a str),
@@ -58,6 +59,12 @@ fn parse_get(input: &str) -> IResult<&str, Command> {
     Ok((input, Command::Get(key)))
 }
 
+fn parse_mget(input: &str) -> IResult<&str, Command> {
+    let (input, _) = tag_no_case("mget ")(input)?;
+    let (input, keys) = separated_list1(tag(" "), parse_key)(input)?;
+    Ok((input, Command::MGet(keys)))
+}
+
 fn parse_increment(input: &str) -> IResult<&str, Command> {
     let (input, _) = tag_no_case("incr ")(input)?;
     let (input, key) = parse_key(input)?;
@@ -76,9 +83,10 @@ fn parse_exit(input: &str) -> IResult<&str, Command> {
 
 pub fn parse_command(input: &str) -> Option<Command> {
     let mut parser = alt((
-        parse_get,
         parse_set,
         parse_mset,
+        parse_get,
+        parse_mget,
         parse_increment,
         parse_list,
         parse_exit,
@@ -93,12 +101,6 @@ pub fn parse_command(input: &str) -> Option<Command> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_parse_get() {
-        assert_eq!(parse_get("get key"), Ok(("", Command::Get("key"))));
-    }
-
     #[test]
     fn test_parse_set() {
         assert_eq!(
@@ -134,6 +136,19 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_get() {
+        assert_eq!(parse_get("get key"), Ok(("", Command::Get("key"))));
+    }
+
+    #[test]
+    fn test_parse_mget() {
+        assert_eq!(
+            parse_mget("mget key1 key2"),
+            Ok(("", Command::MGet(vec!["key1", "key2"])))
+        );
+    }
+
+    #[test]
     fn test_parse_increment() {
         assert_eq!(
             parse_increment("incr key"),
@@ -153,7 +168,6 @@ mod tests {
 
     #[test]
     fn test_parse_command() {
-        assert_eq!(parse_command("get key"), Some(Command::Get("key")));
         assert_eq!(
             parse_command("set key value"),
             Some(Command::Set(KeyValue {
@@ -173,6 +187,11 @@ mod tests {
                     value: "value2"
                 }
             ]))
+        );
+        assert_eq!(parse_command("get key"), Some(Command::Get("key")));
+        assert_eq!(
+            parse_command("mget key1 key2"),
+            Some(Command::MGet(vec!["key1", "key2"]))
         );
         assert_eq!(parse_command("incr key"), Some(Command::Increment("key")));
         assert_eq!(parse_command("list"), Some(Command::List));
