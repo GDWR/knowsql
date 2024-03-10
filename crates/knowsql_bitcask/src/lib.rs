@@ -64,7 +64,7 @@ impl BitCask {
         })
     }
     /// Get a value from the store
-    pub fn get(&mut self, key: &str) -> Option<String> {
+    pub fn get(&self, key: &str) -> Option<String> {
         let meta = self.key_dir.get(key)?;
 
         let mut file = File::open(self.get_active_file()).unwrap();
