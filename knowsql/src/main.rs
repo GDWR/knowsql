@@ -55,6 +55,18 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     stream.write_all(b"BYE\n").unwrap();
                     break;
                 }
+                Command::Increment(key) => {
+                    let mut cask = bitcask.lock().unwrap();
+                    let value = cask.get(&key).unwrap_or("0".to_string());
+
+                    if let Ok(current_value) = value.parse::<isize>() {
+                        let new_value = (current_value + 1).to_string();
+                        cask.put(&key, &new_value).unwrap();
+                        stream.write_all((new_value + "\n").as_bytes()).unwrap();
+                    } else {
+                        stream.write_all(b"ERR\n").unwrap();
+                    }
+                }
             }
         } else {
             stream.write_all(b"INV\n").unwrap();
