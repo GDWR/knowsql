@@ -5,11 +5,11 @@ on:
 
 jobs:
   check:
-    name: Check
+    name: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Nix
+      - name: install Nix
         uses: cachix/install-nix-action@v25
-      - name: Nix flake check
+      - name: nix flake check
         run: nix flake check .
