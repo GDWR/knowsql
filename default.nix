@@ -1,4 +1,4 @@
-{ pkgs, ... }: 
+{ pkgs ? import <nixpkgs> {}, ... }: 
 let
   manifest = (pkgs.lib.importTOML ./Cargo.toml).workspace.package;
 in 
