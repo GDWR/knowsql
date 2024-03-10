@@ -2,6 +2,8 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, tag_no_case},
     character::complete::alphanumeric1,
+    multi::separated_list1,
+    sequence::separated_pair,
     IResult,
 };
 
@@ -15,6 +17,7 @@ pub struct KeyValue<'a> {
 pub enum Command<'a> {
     Get(&'a str),
     Set(KeyValue<'a>),
+    MSet(Vec<KeyValue<'a>>),
     Increment(&'a str),
     List,
     Exit,
@@ -34,6 +37,19 @@ fn parse_set(input: &str) -> IResult<&str, Command> {
     let (input, _) = tag(" ")(input)?;
     let (input, value) = parse_value(input)?;
     Ok((input, Command::Set(KeyValue { key, value })))
+}
+
+fn parse_mset(input: &str) -> IResult<&str, Command> {
+    let (input, _) = tag_no_case("mset ")(input)?;
+    let (input, key_values) =
+        separated_list1(tag(" "), separated_pair(parse_key, tag(" "), parse_value))(input)?;
+
+    let x = key_values
+        .iter()
+        .map(|(key, value)| KeyValue { key, value })
+        .collect::<Vec<KeyValue>>();
+
+    Ok((input, Command::MSet(x)))
 }
 
 fn parse_get(input: &str) -> IResult<&str, Command> {
@@ -62,6 +78,7 @@ pub fn parse_command(input: &str) -> Option<Command> {
     let mut parser = alt((
         parse_get,
         parse_set,
+        parse_mset,
         parse_increment,
         parse_list,
         parse_exit,
@@ -97,6 +114,26 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_mset() {
+        assert_eq!(
+            parse_mset("mset key1 value1 key2 value2"),
+            Ok((
+                "",
+                Command::MSet(vec![
+                    KeyValue {
+                        key: "key1",
+                        value: "value1"
+                    },
+                    KeyValue {
+                        key: "key2",
+                        value: "value2"
+                    }
+                ])
+            ))
+        );
+    }
+
+    #[test]
     fn test_parse_increment() {
         assert_eq!(
             parse_increment("incr key"),
@@ -123,6 +160,19 @@ mod tests {
                 key: "key",
                 value: "value"
             }))
+        );
+        assert_eq!(
+            parse_command("mset key1 value1 key2 value2"),
+            Some(Command::MSet(vec![
+                KeyValue {
+                    key: "key1",
+                    value: "value1"
+                },
+                KeyValue {
+                    key: "key2",
+                    value: "value2"
+                }
+            ]))
         );
         assert_eq!(parse_command("incr key"), Some(Command::Increment("key")));
         assert_eq!(parse_command("list"), Some(Command::List));
