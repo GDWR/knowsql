@@ -36,87 +36,13 @@
         default = pkgs.callPackage ./shell.nix { };
       });
       checks = forAllSystems (pkgs: {
-        # https://nixos.org/manual/nixos/stable/index.html#sec-nixos-tests
-        basic = pkgs.nixosTest {
-          name = "basic";
-          nodes.machine = { config, pkgs, ... }: {
-            imports = [ nixosModules.knowsql { } ];
-            environment.systemPackages = [ pkgs.netcat ];
-
-            services.knowsql.enable = true;
-
-            users.users.user = {
-              isNormalUser = true;
-              extraGroups = [ "wheel" ];
-            };
-
-            system.stateVersion = "23.11";
-          };
-          testScript = ''
-            machine.start()
-            machine.wait_for_unit('default.target')
-
-            machine.wait_for_open_port(2288, 'localhost', timeout=10)
-            machine.succeed('printf "set hello world\nexit" | nc -N localhost 2288 | grep "OK"', timeout=10)
-            machine.succeed('printf "get hello\nexit" | nc -N localhost 2288 | grep "world"', timeout=10)
-          '';
-        };
-        basicRemote = pkgs.nixosTest {
-          name = "basicRemote";
-          nodes = {
-            server = { config, pkgs, ... }: {
-              imports = [ nixosModules.knowsql { } ];
-              services.knowsql.enable = true;
-              networking.firewall = {
-                enable = true;
-                allowedTCPPorts = [ 2288 ];
-              };
-              system.stateVersion = "23.11";
-            };
-            client = { config, pkgs, ... }: {
-              environment.systemPackages = [ pkgs.netcat ];
-              system.stateVersion = "23.11";
-            };
-          };
-          testScript = ''
-            start_all()
-
-            client.wait_for_open_port(2288, 'server', timeout=10)
-            client.succeed('printf "set hello world\nexit" | nc -N server 2288 | grep "OK"', timeout=10)
-            client.succeed('printf "get hello\nexit" | nc -N server 2288 | grep "world"', timeout=10)
-          '';
-        };
-        basicRemoteOver9000 = pkgs.nixosTest {
-          name = "basicRemoteOver9000";
-          nodes = {
-            server = { config, pkgs, ... }: {
-              imports = [ nixosModules.knowsql { } ];
-              services.knowsql = {
-                enable = true;
-                port = 9001;
-              };
-              networking.firewall = {
-                enable = true;
-                allowedTCPPorts = [ 9001 ];
-              };
-              system.stateVersion = "23.11";
-            };
-            client = { config, pkgs, ... }: {
-              environment.systemPackages = [ pkgs.netcat ];
-              system.stateVersion = "23.11";
-            };
-          };
-          testScript = ''
-            start_all()
-
-            client.wait_for_open_port(9001, 'server', timeout=10)
-            client.succeed('printf "set hello world\nexit" | nc -N server 9001 | grep "OK"', timeout=10)
-            client.succeed('printf "get hello\nexit" | nc -N server 9001 | grep "world"', timeout=10)
-          '';
-        };
+        basic = pkgs.callPackage ./tests/basic.nix { inherit pkgs; knowsql = self;};
+        remote = pkgs.callPackage ./tests/remote.nix { inherit pkgs; knowsql = self;};
+        over9000 = pkgs.callPackage ./tests/over9000.nix { inherit pkgs; knowsql = self;};
       });
 
-      nixosModules = {
+      nixosModules = rec {
+        default = knowsql;
         knowsql = { config, lib, pkgs, ... }:
           with lib;
           let settingsFormat = pkgs.formats.toml { };
