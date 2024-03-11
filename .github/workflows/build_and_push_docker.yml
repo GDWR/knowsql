@@ -2,7 +2,19 @@ name: build and deploy docker
 
 on:
   workflow_call:
+    inputs:
+      latest:
+        description: "Tag as latest"
+        type: boolean
+        required: false
+        default: false
   workflow_dispatch:
+    inputs:
+      latest:
+        description: "Tag as latest"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build_docker_image:
@@ -42,3 +54,9 @@ jobs:
         run: docker tag knowsql:${{ github.sha }} ghcr.io/gdwr/knowsql:${{ github.sha }}
       - name: push docker image to ghcr
         run: docker push ghcr.io/gdwr/knowsql:${{ github.sha }}
+      - name: tag docker image as latest
+        if: ${{ inputs.latest }}
+        run: docker tag ghcr.io/gdwr/knowsql:${{ github.sha }} ghcr.io/gdwr/knowsql:latest
+      - name: push docker image to ghcr as latest
+        if: ${{ inputs.latest }}
+        run: docker push ghcr.io/gdwr/knowsql:latest
