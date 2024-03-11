@@ -38,5 +38,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: load docker build
         run: docker load -i ${{ github.workspace }}/docker_image/result
+      - name: tag docker image
+        run: docker tag knowsql:${{ github.sha }} ghcr.io/gdwr/knowsql:${{ github.sha }}
       - name: push docker image to ghcr
-        run: docker push ghcr.io/gdwr/knowsql:${{ github.ref }}
+        run: docker push ghcr.io/gdwr/knowsql:${{ github.sha }}
