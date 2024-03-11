@@ -11,7 +11,7 @@
         knowsql = pkgs.callPackage ./default.nix { };
         dockerImage = pkgs.dockerTools.buildImage {
           name = "knowsql";
-          tag = knowsql.version;
+          tag = self.rev or self.dirtyRev;
           runAsRoot = ''
             #!${pkgs.stdenv.shell}
             mkdir -p /etc/knowsql
