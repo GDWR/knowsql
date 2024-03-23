@@ -7,11 +7,11 @@ pub mod simple;
 pub mod protocol;
 
 /// Parse a command from a string. Attempt to parse as RESP2 first, then fallback to simple.
-pub fn parse_command(input: &str) -> IResult<&str, command::Command> {
+pub fn parse_command(input: &[u8]) -> IResult<&[u8], command::Command> {
     alt((simple::parse_command, resp2::parse_command))(input)
 }
 
-pub fn try_parse_command(input: &str) -> Option<command::Command> {
+pub fn try_parse_command(input: &[u8]) -> Option<command::Command> {
     match parse_command(input) {
         Ok((_, command)) => Some(command),
         Err(_) => None,

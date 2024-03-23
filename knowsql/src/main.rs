@@ -1,9 +1,10 @@
 mod config;
 
 use knowsql_parser::{command::Command, parse_command};
+
 use std::{
     collections::HashMap,
-    io::{BufRead, BufReader, BufWriter, Write},
+    io::{BufRead, BufReader, BufWriter, Read, Write},
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex},
 };
@@ -67,13 +68,11 @@ fn handle_client(stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
             Err(_) => break,
         };
 
-        let str_buf = std::str::from_utf8(reader.buffer()).expect("client input is utf8");
-
-        let (remaining, command) = match parse_command(str_buf) {
+        let (remaining, command) = match parse_command(&reader.buffer()[..buf_size]) {
             Ok(c) => c,
             Err(err) => {
                 error!(err = %err, "parsing did not complete, allowing buffer to refill");
-                break 
+                break
             },
         };
 
@@ -101,6 +100,9 @@ fn handle_client(stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
                     .write_all(format!(":{}\r\n", size).as_bytes())
                     .unwrap();
             }
+            Command::Ping => {
+                writer.write_all(b"+PONG\r\n").unwrap();
+            }
             Command::Quit => {
                 debug!("client quitting");
                 writer.write_all(b"+OK\r\n").unwrap();
@@ -108,7 +110,7 @@ fn handle_client(stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
             }
         }
         writer.flush().unwrap();
-
+        
         let read = buf_size - remaining.len();
         reader.consume(read);
     }
