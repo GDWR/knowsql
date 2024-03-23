@@ -31,6 +31,7 @@
             mdbook build --dest-dir $out
           '';
         };
+	garnet-benchmark = pkgs.callPackage ./packages/garnet-benchmark { };
       });
       devShells = forAllSystems (pkgs: {
         default = pkgs.callPackage ./shell.nix { };
