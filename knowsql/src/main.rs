@@ -11,7 +11,10 @@ use knowsql_bitcask::BitCask;
 
 use knowsql_parser::{parse_command, Command, KeyValue};
 
+use tracing::info;
+
 fn main() {
+    tracing_subscriber::fmt::init();
     let config = config::get_config();
 
     let bitcask = {
@@ -20,7 +23,11 @@ fn main() {
         Arc::new(mutex)
     };
 
-    println!("Starting server on port {}", config.port);
+    info!(
+        port = config.port,
+        data_dir = config.data_dir,
+        "starting knowsql server"
+    );
 
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).unwrap();
 
