@@ -15,15 +15,15 @@ pkgs.nixosTest {
       system.stateVersion = "23.11";
     };
     client = { config, pkgs, ... }: {
-      environment.systemPackages = [ pkgs.netcat ];
+      environment.systemPackages = [ pkgs.redis ];
       system.stateVersion = "23.11";
     };
   };
   testScript = ''
     start_all()
-
     client.wait_for_open_port(9001, 'server', timeout=10)
-    client.succeed('printf "set hello world\nexit" | nc -N server 9001 | grep "OK"', timeout=10)
-    client.succeed('printf "get hello\nexit" | nc -N server 9001 | grep "world"', timeout=10)
+
+    client.succeed('redis-cli -h server -p 9001 SET hello world | grep "OK"', timeout=10)
+    client.succeed('redis-cli -h server -p 9001 GET hello | grep "world"', timeout=10)
   '';
 }
