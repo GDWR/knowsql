@@ -1,7 +1,7 @@
 mod config;
 
 use std::{
-    io::{BufRead, Write},
+    io::{BufRead, BufReader, Write},
     net::{TcpListener, TcpStream},
     path::PathBuf,
     sync::{Arc, Mutex},
@@ -11,7 +11,7 @@ use knowsql_bitcask::BitCask;
 
 use knowsql_parser::{parse_command, Command, KeyValue};
 
-use tracing::{error, info};
+use tracing::{error, info, span, Level};
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -38,15 +38,32 @@ fn main() {
         }
     };
 
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
+    'listen: for stream in listener.incoming() {
+        let stream = match stream {
+            Ok(stream) => stream,
+            Err(err) => {
+                error!(err = %err, "failed to accept client, continuing to serve next client");
+                continue 'listen;
+            }
+        };
+
         let bitcask = bitcask.clone();
         std::thread::spawn(move || handle_client(stream, bitcask));
     }
 }
 
 fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
-    let mut bufreader = std::io::BufReader::new(stream.try_clone().unwrap());
+    let _guard = span!(
+        Level::INFO,
+        "client",
+        client_addr = stream
+            .peer_addr()
+            .expect("every client must have a peer_addr")
+            .to_string()
+    )
+    .entered();
+
+    let mut bufreader = BufReader::new(stream.try_clone().unwrap());
     loop {
         let mut buf = String::new();
         bufreader.read_line(&mut buf).unwrap();

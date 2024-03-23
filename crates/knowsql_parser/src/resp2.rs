@@ -1,6 +1,5 @@
 ///! Redis Serialization Protocol (RESP2) parser
 ///! https://redis.io/docs/reference/protocol-spec/
-
 use nom::{
     branch::alt,
     bytes::complete::{tag_no_case, take},
@@ -104,7 +103,11 @@ mod tests {
             parse_data("*3\r\n+Foo\r\n-Bar\r\n:1000\r\n"),
             Ok((
                 "",
-                Data::Array(vec![Data::String("Foo"), Data::Error("Bar"), Data::Integer(1000)])
+                Data::Array(vec![
+                    Data::String("Foo"),
+                    Data::Error("Bar"),
+                    Data::Integer(1000)
+                ])
             ))
         );
     }
