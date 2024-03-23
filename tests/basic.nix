@@ -1,9 +1,9 @@
 { knowsql, pkgs, ... }:
 pkgs.nixosTest {
   name = "basic";
-  nodes.machine = { config, pkgs, ... }: {
+  nodes.client = { config, pkgs, ... }: {
     imports = [ knowsql.nixosModules.default { } ];
-    environment.systemPackages = [ pkgs.netcat ];
+    environment.systemPackages = [ pkgs.redis ];
 
     services.knowsql.enable = true;
 
@@ -15,11 +15,10 @@ pkgs.nixosTest {
     system.stateVersion = "23.11";
   };
   testScript = ''
-    machine.start()
-    machine.wait_for_unit('default.target')
+    start_all()
+    client.wait_for_open_port(2288, 'localhost', timeout=10)
 
-    machine.wait_for_open_port(2288, 'localhost', timeout=10)
-    machine.succeed('printf "set hello world\nexit" | nc -N localhost 2288 | grep "OK"', timeout=10)
-    machine.succeed('printf "get hello\nexit" | nc -N localhost 2288 | grep "world"', timeout=10)
+    client.succeed('redis-cli -p 2288 SET hello world | grep "OK"', timeout=10)
+    client.succeed('redis-cli -p 2288 GET hello | grep "world"', timeout=10)
   '';
 }

@@ -140,6 +140,7 @@ name = "knowsql_parser"
 version = "0.0.1"
 dependencies = [
  "nom",
+ "tracing",
 ]
 
 [[package]]

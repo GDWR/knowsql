@@ -26,9 +26,11 @@ struct Entry<'a> {
 /// A key to locate a value within a data file
 #[derive(Debug)]
 struct Key {
+    #[allow(dead_code)]
     file_id: u32,
     value_size: u32,
     value_position: u64,
+    #[allow(dead_code)]
     timestamp: i64,
 }
 

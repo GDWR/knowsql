@@ -1,27 +1,20 @@
 mod config;
 
+use knowsql_parser::{command::Command, parse_command};
 use std::{
-    io::{BufRead, BufReader, Write},
+    collections::HashMap,
+    io::{BufRead, BufReader, BufWriter, Write},
     net::{TcpListener, TcpStream},
-    path::PathBuf,
     sync::{Arc, Mutex},
 };
-
-use knowsql_bitcask::BitCask;
-
-use knowsql_parser::{parse_command, Command, KeyValue};
-
-use tracing::{error, info, span, Level};
+use tracing::{debug, error, info, span, Level};
 
 fn main() {
     tracing_subscriber::fmt::init();
     let config = config::get_config();
 
-    let bitcask = {
-        let cask = BitCask::open(PathBuf::from(&config.data_dir)).unwrap();
-        let mutex = Mutex::new(cask);
-        Arc::new(mutex)
-    };
+    let map: HashMap<String, String> = HashMap::new();
+    let map = Arc::new(Mutex::new(map));
 
     info!(
         port = config.port,
@@ -38,94 +31,87 @@ fn main() {
         }
     };
 
-    'listen: for stream in listener.incoming() {
+    for stream in listener.incoming() {
         let stream = match stream {
             Ok(stream) => stream,
             Err(err) => {
                 error!(err = %err, "failed to accept client, continuing to serve next client");
-                continue 'listen;
+                continue;
             }
         };
 
-        let bitcask = bitcask.clone();
-        std::thread::spawn(move || handle_client(stream, bitcask));
+        let map = map.clone();
+        std::thread::spawn(move || handle_client(stream, map));
     }
 }
 
-fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
+fn handle_client(stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
     let _guard = span!(
         Level::INFO,
         "client",
         client_addr = stream
             .peer_addr()
             .expect("every client must have a peer_addr")
-            .to_string()
+            .to_string(),
+        thread = ?std::thread::current().id(),
     )
     .entered();
 
-    let mut bufreader = BufReader::new(stream.try_clone().unwrap());
+    let mut reader = BufReader::new(stream.try_clone().unwrap());
+    let mut writer = BufWriter::new(stream);
+
+    info!("serving new client");
     loop {
-        let mut buf = String::new();
-        bufreader.read_line(&mut buf).unwrap();
+        let buf_size = match reader.fill_buf() {
+            Ok(buf) => buf.len(),
+            Err(_) => break,
+        };
 
-        if let Some(command) = parse_command(&buf) {
-            match command {
-                Command::Set(KeyValue { key, value }) => {
-                    match bitcask.lock().unwrap().put(key, value) {
-                        Ok(_) => stream.write_all(b"OK\n").unwrap(),
-                        Err(_) => stream.write_all(b"ERR\n").unwrap(),
-                    }
-                }
-                Command::MSet(key_values) => {
-                    let mut cask = bitcask.lock().unwrap();
-                    for kv in key_values {
-                        cask.put(kv.key, kv.value).unwrap();
-                    }
-                    stream.write_all(b"OK\n").unwrap();
-                }
-                Command::Get(key) => match bitcask.lock().unwrap().get(key) {
-                    Some(value) => stream.write_all((value + "\n").as_bytes()).unwrap(),
-                    None => stream.write_all(b"NIL\n").unwrap(),
-                },
-                Command::MGet(keys) => {
-                    let mut cask = bitcask.lock().unwrap();
+        let str_buf = std::str::from_utf8(reader.buffer()).expect("client input is utf8");
 
-                    for (i, key) in keys.iter().enumerate() {
-                        if i > 0 {
-                            stream.write(" ".as_bytes()).unwrap();
-                        }
+        let (remaining, command) = match parse_command(str_buf) {
+            Ok(c) => c,
+            Err(err) => {
+                error!(err = %err, "parsing did not complete, allowing buffer to refill");
+                break 
+            },
+        };
 
-                        if let Some(value) = cask.get(&key) {
-                            stream.write(value.as_bytes()).unwrap();
-                        } else {
-                            stream.write("NIL".as_bytes()).unwrap();
-                        }
-                    }
-                    stream.write("\n".as_bytes()).unwrap();
-                }
-                Command::List => {
-                    let keys = bitcask.lock().unwrap().list_keys().join(" ");
-                    stream.write_all((keys + "\n").as_bytes()).unwrap();
-                }
-                Command::Exit => {
-                    stream.write_all(b"BYE\n").unwrap();
-                    break;
-                }
-                Command::Increment(key) => {
-                    let mut cask = bitcask.lock().unwrap();
-                    let value = cask.get(&key).unwrap_or("0".to_string());
+        debug!(command = ?command, "handling command");
 
-                    if let Ok(current_value) = value.parse::<isize>() {
-                        let new_value = (current_value + 1).to_string();
-                        cask.put(&key, &new_value).unwrap();
-                        stream.write_all((new_value + "\n").as_bytes()).unwrap();
-                    } else {
-                        stream.write_all(b"ERR\n").unwrap();
-                    }
+        match command {
+            Command::Get(key) => {
+                let map = map.lock().unwrap();
+                match map.get(key) {
+                    Some(value) => writer
+                        .write_all(format!("+{}\r\n", value).as_bytes())
+                        .unwrap(),
+                    None => writer.write_all(b"$-1\r\n").unwrap(),
                 }
             }
-        } else {
-            stream.write_all(b"INV\n").unwrap();
+            Command::Set(key, value) => {
+                let mut map = map.lock().unwrap();
+                map.insert(key.to_string(), value.to_string());
+                writer.write_all(b"+OK\r\n").unwrap();
+            }
+            Command::DbSize => {
+                let map = map.lock().unwrap();
+                let size = map.len();
+                writer
+                    .write_all(format!(":{}\r\n", size).as_bytes())
+                    .unwrap();
+            }
+            Command::Quit => {
+                debug!("client quitting");
+                writer.write_all(b"+OK\r\n").unwrap();
+                break;
+            }
         }
+        writer.flush().unwrap();
+
+        let read = buf_size - remaining.len();
+        reader.consume(read);
     }
+
+    info!("client session closing");
 }
