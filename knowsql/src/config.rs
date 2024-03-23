@@ -1,7 +1,7 @@
 use serde::Deserialize;
-use tracing::{debug, warn};
 use std::fs::read_to_string;
 use toml;
+use tracing::{debug, warn};
 
 const DEFAULT_CONFIG_PATH: &'static str = "/etc/knowsql/config.toml";
 
@@ -32,6 +32,9 @@ pub fn get_config() -> Config {
         }
     }
 
-    warn!(path = config_path, "unable to read configuration. using defaults.");
+    warn!(
+        path = config_path,
+        "unable to read configuration. using defaults."
+    );
     Config::default()
 }

@@ -11,7 +11,7 @@ use knowsql_bitcask::BitCask;
 
 use knowsql_parser::{parse_command, Command, KeyValue};
 
-use tracing::info;
+use tracing::{error, info};
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -29,7 +29,14 @@ fn main() {
         "starting knowsql server"
     );
 
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).unwrap();
+    let addr = format!("0.0.0.0:{}", config.port);
+    let listener = match TcpListener::bind(addr.clone()) {
+        Ok(listener) => listener,
+        Err(err) => {
+            error!(addr = addr, err = %err, "failed to create TcpListener");
+            return;
+        }
+    };
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
