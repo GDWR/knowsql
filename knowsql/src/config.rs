@@ -27,9 +27,11 @@ pub fn get_config() -> Config {
 
     if let Ok(config) = read_to_string(config_path.clone()) {
         debug!(path = config_path, "loading configuration");
-        toml::from_str(&config).unwrap()
-    } else {
-        warn!(path = config_path, "unable to read configuration. using defaults.");
-        Config::default()
+        if let Ok(parsed_config) = toml::from_str(&config) {
+            return parsed_config;
+        }
     }
+
+    warn!(path = config_path, "unable to read configuration. using defaults.");
+    Config::default()
 }
