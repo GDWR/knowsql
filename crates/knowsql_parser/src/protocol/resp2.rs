@@ -51,27 +51,33 @@ fn parse_string(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, _) = tag_no_case("+")(input)?;
     let (input, data) = not_line_ending(input)?;
     let (input, _) = line_ending(input)?;
-    Ok((input, Data::String(std::str::from_utf8(data).expect("data is valid utf8 string"))))
+    Ok((
+        input,
+        Data::String(std::str::from_utf8(data).expect("data is valid utf8 string")),
+    ))
 }
 
 fn parse_error(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, _) = tag_no_case("-")(input)?;
     let (input, data) = not_line_ending(input)?;
     let (input, _) = line_ending(input)?;
-    Ok((input, Data::Error(std::str::from_utf8(data).expect("data is valid utf8 string"))))
+    Ok((
+        input,
+        Data::Error(std::str::from_utf8(data).expect("data is valid utf8 string")),
+    ))
 }
 
 fn parse_integer(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, _) = tag_no_case(":")(input)?;
     let (input, data) = digit1(input)?;
-    
+
     // safety: digit1 ensures that the string is valid utf8
     let data = unsafe {
         std::str::from_utf8_unchecked(data)
             .parse()
             .expect("string parsed with digit1 is a valid integer")
     };
-    
+
     let (input, _) = line_ending(input)?;
     Ok((input, Data::Integer(data)))
 }
@@ -90,13 +96,19 @@ fn parse_bulk_string(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, _) = line_ending(input)?;
     let (input, data) = take(length)(input)?;
     let (input, _) = line_ending(input)?;
-    Ok((input, Data::BulkString { length, data: std::str::from_utf8(data).expect("data is valid utf8 string")}))
+    Ok((
+        input,
+        Data::BulkString {
+            length,
+            data: std::str::from_utf8(data).expect("data is valid utf8 string"),
+        },
+    ))
 }
 
 fn parse_array<'a>(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, _) = tag_no_case("*")(input)?;
     let (input, length) = digit1(input)?;
-    
+
     // safety: digit1 ensures that the string is valid utf8
     let length = unsafe {
         std::str::from_utf8_unchecked(length)
@@ -126,10 +138,38 @@ mod tests {
 
     #[test]
     fn test_parse_data() {
-        assert_eq!(parse_data("+OK\r\n".as_bytes()), Ok(("".as_bytes(), Data::String("OK"))));
-        assert_eq!(parse_data("-ERR\r\n".as_bytes()), Ok(("".as_bytes(), Data::Error("ERR"))));
-        assert_eq!(parse_data(":1000\r\n".as_bytes()), Ok(("".as_bytes(), Data::Integer(1000))));
-        assert_eq!(parse_data("$6\r\nfoobar\r\n".as_bytes()), Ok(("".as_bytes(), Data::BulkString { length: 6, data: "foobar" } )));
-        assert_eq!(parse_data("*3\r\n+Foo\r\n-Bar\r\n:1000\r\n".as_bytes()), Ok(("".as_bytes(), Data::Array(vec![Data::String("Foo"), Data::Error("Bar"), Data::Integer(1000)]))));
+        assert_eq!(
+            parse_data("+OK\r\n".as_bytes()),
+            Ok(("".as_bytes(), Data::String("OK")))
+        );
+        assert_eq!(
+            parse_data("-ERR\r\n".as_bytes()),
+            Ok(("".as_bytes(), Data::Error("ERR")))
+        );
+        assert_eq!(
+            parse_data(":1000\r\n".as_bytes()),
+            Ok(("".as_bytes(), Data::Integer(1000)))
+        );
+        assert_eq!(
+            parse_data("$6\r\nfoobar\r\n".as_bytes()),
+            Ok((
+                "".as_bytes(),
+                Data::BulkString {
+                    length: 6,
+                    data: "foobar"
+                }
+            ))
+        );
+        assert_eq!(
+            parse_data("*3\r\n+Foo\r\n-Bar\r\n:1000\r\n".as_bytes()),
+            Ok((
+                "".as_bytes(),
+                Data::Array(vec![
+                    Data::String("Foo"),
+                    Data::Error("Bar"),
+                    Data::Integer(1000)
+                ])
+            ))
+        );
     }
 }

@@ -17,9 +17,7 @@
             mkdir -p /etc/knowsql
             printf 'port = 2288\ndata_dir = "/etc/knowsql/data"' > /etc/knowsql/config.toml
           '';
-          config = {
-            Entrypoint = [ "${knowsql}/bin/knowsql" ];
-          };
+          config = { Entrypoint = [ "${knowsql}/bin/knowsql" ]; };
         };
         docs = pkgs.stdenv.mkDerivation {
           name = "knowsql-docs";
@@ -31,15 +29,23 @@
             mdbook build --dest-dir $out
           '';
         };
-	garnet-benchmark = pkgs.callPackage ./externals/garnet-benchmark { };
+        garnet-benchmark = pkgs.callPackage ./externals/garnet-benchmark { };
       });
-      devShells = forAllSystems (pkgs: {
-        default = pkgs.callPackage ./shell.nix { };
-      });
+      devShells =
+        forAllSystems (pkgs: { default = pkgs.callPackage ./shell.nix { }; });
       checks = forAllSystems (pkgs: {
-        basic = pkgs.callPackage ./tests/basic.nix { inherit pkgs; knowsql = self;};
-        remote = pkgs.callPackage ./tests/remote.nix { inherit pkgs; knowsql = self;};
-        over9000 = pkgs.callPackage ./tests/over9000.nix { inherit pkgs; knowsql = self;};
+        basic = pkgs.callPackage ./tests/basic.nix {
+          inherit pkgs;
+          knowsql = self;
+        };
+        remote = pkgs.callPackage ./tests/remote.nix {
+          inherit pkgs;
+          knowsql = self;
+        };
+        over9000 = pkgs.callPackage ./tests/over9000.nix {
+          inherit pkgs;
+          knowsql = self;
+        };
       });
 
       nixosModules = rec {
