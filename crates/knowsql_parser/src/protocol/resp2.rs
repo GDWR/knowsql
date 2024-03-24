@@ -149,10 +149,7 @@ mod tests {
         );
         assert_eq!(
             parse_data("$6\r\nfoobar\r\n".as_bytes()),
-            Ok((
-                "".as_bytes(),
-                Data::BulkString("foobar")
-            ))
+            Ok(("".as_bytes(), Data::BulkString("foobar")))
         );
         assert_eq!(
             parse_data("*3\r\n+Foo\r\n-Bar\r\n:1000\r\n".as_bytes()),
@@ -166,15 +163,13 @@ mod tests {
             ))
         );
         assert_eq!(
-            parse_data("*2\r\n$3\r\nGET\r\n$5\r\nhello\r\n\r\n*2\r\n$4\r\nECHO\r\n$20\r\n".as_bytes()),
+            parse_data(
+                "*2\r\n$3\r\nGET\r\n$5\r\nhello\r\n\r\n*2\r\n$4\r\nECHO\r\n$20\r\n".as_bytes()
+            ),
             Ok((
                 "\r\n*2\r\n$4\r\nECHO\r\n$20\r\n".as_bytes(),
-                Data::Array(vec![
-                    Data::BulkString("GET"),
-                    Data::BulkString("hello"),
-                ])
+                Data::Array(vec![Data::BulkString("GET"), Data::BulkString("hello"),])
             ))
         )
-
     }
 }

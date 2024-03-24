@@ -8,9 +8,9 @@ use knowsql_parser::{
 };
 
 use std::{
-    io::{BufWriter, Read, Write}, 
-    net::{TcpListener, TcpStream}, 
-    sync::{Arc, Mutex}
+    io::{BufWriter, Read, Write},
+    net::{TcpListener, TcpStream},
+    sync::{Arc, Mutex},
 };
 use tracing::{debug, error, info, span, trace, Level};
 
@@ -100,11 +100,7 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                             .flat_map(|(name, doc)| {
                                 vec![
                                     Data::BulkString(name),
-                                    Data::Array(
-                                        doc.iter()
-                                            .map(|d| Data::BulkString(d))
-                                            .collect()
-                                    ),
+                                    Data::Array(doc.iter().map(|d| Data::BulkString(d)).collect()),
                                 ]
                             })
                             .collect(),
@@ -114,7 +110,9 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     writer.write_all(resp.as_bytes()).unwrap();
                 }
                 Command::Echo(message) => {
-                    writer.write_all(format!("+{}\r\n", message).as_bytes()).unwrap();
+                    writer
+                        .write_all(format!("+{}\r\n", message).as_bytes())
+                        .unwrap();
                 }
                 Command::Get(key) => {
                     let bitcask = bitcask.lock().unwrap();
@@ -126,43 +124,29 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     }
                 }
                 Command::Keys(_pattern) => {
-                    let keys = bitcask
-                        .lock()
-                        .unwrap()
-                        .keys();
-                    
-                    let response = Data::Array(
-                        keys
-                            .iter()
-                            .map(|key| Data::BulkString(key))
-                            .collect()
-                    );
+                    let keys = bitcask.lock().unwrap().keys();
+
+                    let response =
+                        Data::Array(keys.iter().map(|key| Data::BulkString(key)).collect());
 
                     let resp = response.as_str().expect("constructed from static values");
 
                     trace!(data = ?response, resp = resp, "sending response");
                     writer.write_all(resp.as_bytes()).unwrap();
                 }
-                Command::Set(key, value) => {
-                    match bitcask
-                        .lock()
-                        .unwrap()
-                        .put(key, value) {
-                        Ok(_) => {
-                            writer.write_all(b"+OK\r\n").unwrap();
-                        }
-                        Err(_) => {
-                            writer.write_all("-failed to set key value pair\r\n".as_bytes()).unwrap();
-                        }
+                Command::Set(key, value) => match bitcask.lock().unwrap().put(key, value) {
+                    Ok(_) => {
+                        writer.write_all(b"+OK\r\n").unwrap();
                     }
-                }
+                    Err(_) => {
+                        writer
+                            .write_all("-failed to set key value pair\r\n".as_bytes())
+                            .unwrap();
+                    }
+                },
                 Command::DbSize => {
-                    let size = bitcask
-                        .lock()
-                        .unwrap()
-                        .keys()
-                        .len();
-                    
+                    let size = bitcask.lock().unwrap().keys().len();
+
                     writer
                         .write_all(format!(":{}\r\n", size).as_bytes())
                         .unwrap();

@@ -16,10 +16,13 @@ pub enum SubCommand {
 }
 
 impl Command<'_> {
-    pub fn all_commands() -> &'static[(&'static str, &'static [&'static str])] {
+    pub fn all_commands() -> &'static [(&'static str, &'static [&'static str])] {
         &[
             ("DBSIZE", &["Return the number of keys in the database."]),
-            ("COMMAND DOCS", &["Return documentary information about commands."]),
+            (
+                "COMMAND DOCS",
+                &["Return documentary information about commands."],
+            ),
             ("ECHO", &["Returns message."]),
             ("GET", &["Get the value of key."]),
             ("KEYS", &["Get all keys matching pattern."]),
