@@ -114,8 +114,6 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
                     );
 
                     let resp = response.as_str().expect("constructed from static values");
-
-                    trace!(data = ?response, resp = resp, "sending response");
                     writer.write_all(resp.as_bytes()).unwrap();
                 }
                 Command::Get(key) => {
@@ -126,6 +124,23 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
                             .unwrap(),
                         None => writer.write_all(b"$-1\r\n").unwrap(),
                     }
+                }
+                Command::Keys(_pattern) => {
+                    let map = map.lock().unwrap();
+
+                    let keys = map.keys()
+                        .clone();
+
+                    let response = Data::Array(
+                        keys
+                            .map(|key| Data::String(key))
+                            .collect(),
+                    );
+
+                    let resp = response.as_str().expect("constructed from static values");
+
+                    trace!(data = ?response, resp = resp, "sending response");
+                    writer.write_all(resp.as_bytes()).unwrap();
                 }
                 Command::Set(key, value) => {
                     let mut map = map.lock().unwrap();
