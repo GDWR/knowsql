@@ -46,6 +46,10 @@
           inherit pkgs;
           knowsql = self;
         };
+        pipelined = pkgs.callPackage ./tests/pipelined.nix {
+          inherit pkgs;
+          knowsql = self;
+        };
       });
 
       nixosModules = rec {
