@@ -16,7 +16,10 @@ fn parse_get(input: &[u8]) -> IResult<&[u8], Command> {
     let (input, _) = tag_no_case("get")(input)?;
     let (input, _) = tag(" ")(input)?;
     let (input, key) = alphanumeric1(input)?;
-    Ok((input, Command::Get(std::str::from_utf8(key).expect("key is valid utf8 string"))))
+    Ok((
+        input,
+        Command::Get(std::str::from_utf8(key).expect("key is valid utf8 string")),
+    ))
 }
 
 fn parse_set(input: &[u8]) -> IResult<&[u8], Command> {
@@ -25,7 +28,13 @@ fn parse_set(input: &[u8]) -> IResult<&[u8], Command> {
     let (input, key) = alphanumeric1(input)?;
     let (input, _) = tag(" ")(input)?;
     let (input, value) = alphanumeric1(input)?;
-    Ok((input, Command::Set(std::str::from_utf8(key).expect("key is valid utf8 string"), std::str::from_utf8(value).expect("value is valid utf8 string"))))
+    Ok((
+        input,
+        Command::Set(
+            std::str::from_utf8(key).expect("key is valid utf8 string"),
+            std::str::from_utf8(value).expect("value is valid utf8 string"),
+        ),
+    ))
 }
 
 fn parse_ping(input: &[u8]) -> IResult<&[u8], Command> {

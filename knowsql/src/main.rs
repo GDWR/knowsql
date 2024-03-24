@@ -1,14 +1,18 @@
 mod config;
 
-use knowsql_parser::{command::Command, parse_command};
+use knowsql_parser::{
+    command::{Command, SubCommand},
+    parse_command,
+    protocol::resp2::Data,
+};
 
 use std::{
     collections::HashMap,
-    io::{BufRead, BufReader, BufWriter, Read, Write},
+    io::{BufWriter, Read, Write},
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex},
 };
-use tracing::{debug, error, info, span, Level};
+use tracing::{debug, error, info, span, trace, Level};
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -46,74 +50,111 @@ fn main() {
     }
 }
 
-fn handle_client(stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
+fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
     let _guard = span!(
         Level::INFO,
         "client",
-        client_addr = stream
+        addr = stream
             .peer_addr()
             .expect("every client must have a peer_addr")
             .to_string(),
-        thread = ?std::thread::current().id(),
     )
     .entered();
 
-    let mut reader = BufReader::new(stream.try_clone().unwrap());
-    let mut writer = BufWriter::new(stream);
+    let mut buffer = [0; 1024 * 1024];
+    let mut writer = BufWriter::new(stream.try_clone().unwrap());
 
-    info!("serving new client");
+    info!("new connection");
     loop {
-        let buf_size = match reader.fill_buf() {
-            Ok(buf) => buf.len(),
-            Err(_) => break,
-        };
-
-        let (remaining, command) = match parse_command(&reader.buffer()[..buf_size]) {
-            Ok(c) => c,
+        trace!("reading from stream");
+        let read = match stream.read(&mut buffer) {
             Err(err) => {
-                error!(err = %err, "parsing did not complete, allowing buffer to refill");
-                break
-            },
-        };
-
-        debug!(command = ?command, "handling command");
-
-        match command {
-            Command::Get(key) => {
-                let map = map.lock().unwrap();
-                match map.get(key) {
-                    Some(value) => writer
-                        .write_all(format!("+{}\r\n", value).as_bytes())
-                        .unwrap(),
-                    None => writer.write_all(b"$-1\r\n").unwrap(),
-                }
-            }
-            Command::Set(key, value) => {
-                let mut map = map.lock().unwrap();
-                map.insert(key.to_string(), value.to_string());
-                writer.write_all(b"+OK\r\n").unwrap();
-            }
-            Command::DbSize => {
-                let map = map.lock().unwrap();
-                let size = map.len();
-                writer
-                    .write_all(format!(":{}\r\n", size).as_bytes())
-                    .unwrap();
-            }
-            Command::Ping => {
-                writer.write_all(b"+PONG\r\n").unwrap();
-            }
-            Command::Quit => {
-                debug!("client quitting");
-                writer.write_all(b"+OK\r\n").unwrap();
+                debug!(err = %err, "failed to read from stream");
                 break;
             }
+            Ok(read) if read == 0 => {
+                debug!("client closed connection");
+                break;
+            }
+            Ok(read) => read,
+        };
+
+        let mut consumed = 0;
+        while consumed <= read {
+            let (remaining, command) = match parse_command(&buffer[consumed..read]) {
+                Ok(c) => c,
+                Err(_) => {
+                    trace!("parsing did not complete, allowing buffer to refill");
+                    break;
+                }
+            };
+
+            let size = (read - consumed) - remaining.len();
+            consumed += size;
+            debug!(command = ?command, size = size, "handling command");
+
+            match command {
+                Command::Command(SubCommand::Docs) => {
+                    let response = Data::Array(
+                        Command::all_commands()
+                            .iter()
+                            .flat_map(|(name, doc)| {
+                                vec![
+                                    Data::BulkString {
+                                        data: name,
+                                        length: name.len(),
+                                    },
+                                    Data::Array(vec![Data::BulkString {
+                                        data: doc[0],
+                                        length: doc[0].len(),
+                                    }]),
+                                ]
+                            })
+                            .collect(),
+                    );
+
+                    let resp = response.as_str().expect("constructed from static values");
+
+                    trace!(data = ?response, resp = resp, "sending response");
+                    writer.write_all(resp.as_bytes()).unwrap();
+                }
+                Command::Get(key) => {
+                    let map = map.lock().unwrap();
+                    match map.get(key) {
+                        Some(value) => writer
+                            .write_all(format!("+{}\r\n", value).as_bytes())
+                            .unwrap(),
+                        None => writer.write_all(b"$-1\r\n").unwrap(),
+                    }
+                }
+                Command::Set(key, value) => {
+                    let mut map = map.lock().unwrap();
+                    map.insert(key.to_string(), value.to_string());
+                    writer.write_all(b"+OK\r\n").unwrap();
+                }
+                Command::DbSize => {
+                    let map = map.lock().unwrap();
+                    let size = map.len();
+                    writer
+                        .write_all(format!(":{}\r\n", size).as_bytes())
+                        .unwrap();
+                }
+                Command::Ping => {
+                    writer.write_all(b"+PONG\r\n").unwrap();
+                }
+                Command::Quit => {
+                    debug!("client quitting");
+                    writer.write_all(b"+OK\r\n").unwrap();
+                    break;
+                }
+            }
+
+            trace!("flushing writer");
+            writer.flush().unwrap();
         }
-        writer.flush().unwrap();
-        
-        let read = buf_size - remaining.len();
-        reader.consume(read);
+
+        buffer.copy_within(consumed..read, 0);
     }
 
-    info!("client session closing");
+    debug!("client going away");
 }

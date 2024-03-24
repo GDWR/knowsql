@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {}, ... }:
+{ pkgs ? import <nixpkgs> { }, ... }:
 pkgs.buildDotnetModule rec {
   pname = "garnet-benchmark";
   version = "1.0.0";

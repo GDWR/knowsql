@@ -19,7 +19,7 @@ pkgs.nixosTest {
   testScript = ''
     start_all()
     client.wait_for_open_port(2288, 'server', timeout=10)
-   
+
     client.succeed('redis-cli -h server -p 2288 SET hello world | grep "OK"', timeout=10)
     client.succeed('redis-cli -h server -p 2288 GET hello | grep "world"', timeout=10)
   '';
