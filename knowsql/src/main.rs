@@ -8,7 +8,9 @@ use knowsql_parser::{
 };
 
 use std::{
-    collections::HashMap, io::{BufWriter, Read, Write}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}
+    io::{BufWriter, Read, Write}, 
+    net::{TcpListener, TcpStream}, 
+    sync::{Arc, Mutex}
 };
 use tracing::{debug, error, info, span, trace, Level};
 
@@ -97,14 +99,12 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                             .iter()
                             .flat_map(|(name, doc)| {
                                 vec![
-                                    Data::BulkString {
-                                        data: name,
-                                        length: name.len(),
-                                    },
-                                    Data::Array(vec![Data::BulkString {
-                                        data: doc[0],
-                                        length: doc[0].len(),
-                                    }]),
+                                    Data::BulkString(name),
+                                    Data::Array(
+                                        doc.iter()
+                                            .map(|d| Data::BulkString(d))
+                                            .collect()
+                                    ),
                                 ]
                             })
                             .collect(),
@@ -134,7 +134,7 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     let response = Data::Array(
                         keys
                             .iter()
-                            .map(|key| Data::BulkString { length: key.len(), data: key })
+                            .map(|key| Data::BulkString(key))
                             .collect()
                     );
 

@@ -15,9 +15,9 @@ pub enum Data<'a> {
     /// [Simple Error](https://redis.io/docs/reference/protocol-spec/#simple-errors)
     Error(&'a str),
     /// [Integer](https://redis.io/docs/reference/protocol-spec/#integers)
-    Integer(i64),
+    Integer(isize),
     /// [Bulk String](https://redis.io/docs/reference/protocol-spec/#bulk-strings)
-    BulkString { length: usize, data: &'a str },
+    BulkString(&'a str),
     /// [Array](https://redis.io/docs/reference/protocol-spec/#arrays)
     Array(Vec<Data<'a>>),
 }
@@ -29,7 +29,7 @@ impl Data<'_> {
             Data::String(data) => Some(format!("+{}\r\n", data)),
             Data::Error(data) => Some(format!("-{}\r\n", data)),
             Data::Integer(data) => Some(format!(":{}\r\n", data)),
-            Data::BulkString { data, .. } => Some(format!("${}\r\n{}\r\n", data.len(), data)),
+            Data::BulkString(data) => Some(format!("${}\r\n{}\r\n", data.len(), data)),
             Data::Array(data) => {
                 let mut result = String::from("*");
                 result.push_str(&data.len().to_string());
@@ -72,7 +72,7 @@ fn parse_integer(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, data) = digit1(input)?;
 
     // safety: digit1 ensures that the string is valid utf8
-    let data = unsafe {
+    let data: isize = unsafe {
         std::str::from_utf8_unchecked(data)
             .parse()
             .expect("string parsed with digit1 is a valid integer")
@@ -87,7 +87,7 @@ fn parse_bulk_string(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, length) = digit1(input)?;
 
     // safety: digit1 ensures that the string is valid utf8
-    let length = unsafe {
+    let length: usize = unsafe {
         std::str::from_utf8_unchecked(length)
             .parse()
             .expect("string parsed with digit1 is a valid integer")
@@ -98,10 +98,7 @@ fn parse_bulk_string(input: &[u8]) -> IResult<&[u8], Data> {
     let (input, _) = line_ending(input)?;
     Ok((
         input,
-        Data::BulkString {
-            length,
-            data: std::str::from_utf8(data).expect("data is valid utf8 string"),
-        },
+        Data::BulkString(std::str::from_utf8(data).expect("data is valid utf8 string")),
     ))
 }
 
@@ -154,10 +151,7 @@ mod tests {
             parse_data("$6\r\nfoobar\r\n".as_bytes()),
             Ok((
                 "".as_bytes(),
-                Data::BulkString {
-                    length: 6,
-                    data: "foobar"
-                }
+                Data::BulkString("foobar")
             ))
         );
         assert_eq!(
@@ -176,8 +170,8 @@ mod tests {
             Ok((
                 "\r\n*2\r\n$4\r\nECHO\r\n$20\r\n".as_bytes(),
                 Data::Array(vec![
-                    Data::BulkString{ data: "GET", length: 3 },
-                    Data::BulkString{ data: "hello", length: 5 },
+                    Data::BulkString("GET"),
+                    Data::BulkString("hello"),
                 ])
             ))
         )
