@@ -1,5 +1,6 @@
 mod config;
 
+use knowsql_bitcask::BitCask;
 use knowsql_parser::{
     command::{Command, SubCommand},
     parse_command,
@@ -15,8 +16,8 @@ fn main() {
     tracing_subscriber::fmt::init();
     let config = config::get_config();
 
-    let map: HashMap<String, String> = HashMap::new();
-    let map = Arc::new(Mutex::new(map));
+    let bitcask = BitCask::open(config.data_dir.clone().into()).expect("failed to open bitcask");
+    let bitcask = Arc::new(Mutex::new(bitcask));
 
     info!(
         port = config.port,
@@ -42,12 +43,12 @@ fn main() {
             }
         };
 
-        let map = map.clone();
-        std::thread::spawn(move || handle_client(stream, map));
+        let bitcask = bitcask.clone();
+        std::thread::spawn(move || handle_client(stream, bitcask));
     }
 }
 
-fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>) {
+fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
     let _guard = span!(
         Level::INFO,
         "client",
@@ -116,8 +117,8 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
                     writer.write_all(format!("+{}\r\n", message).as_bytes()).unwrap();
                 }
                 Command::Get(key) => {
-                    let map = map.lock().unwrap();
-                    match map.get(key) {
+                    let bitcask = bitcask.lock().unwrap();
+                    match bitcask.get(key) {
                         Some(value) => writer
                             .write_all(format!("+{}\r\n", value).as_bytes())
                             .unwrap(),
@@ -125,15 +126,16 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
                     }
                 }
                 Command::Keys(_pattern) => {
-                    let map = map.lock().unwrap();
-
-                    let keys = map.keys()
-                        .clone();
-
+                    let keys = bitcask
+                        .lock()
+                        .unwrap()
+                        .keys();
+                    
                     let response = Data::Array(
                         keys
-                            .map(|key| Data::String(key))
-                            .collect(),
+                            .iter()
+                            .map(|key| Data::BulkString { length: key.len(), data: key })
+                            .collect()
                     );
 
                     let resp = response.as_str().expect("constructed from static values");
@@ -142,13 +144,25 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
                     writer.write_all(resp.as_bytes()).unwrap();
                 }
                 Command::Set(key, value) => {
-                    let mut map = map.lock().unwrap();
-                    map.insert(key.to_string(), value.to_string());
-                    writer.write_all(b"+OK\r\n").unwrap();
+                    match bitcask
+                        .lock()
+                        .unwrap()
+                        .put(key, value) {
+                        Ok(_) => {
+                            writer.write_all(b"+OK\r\n").unwrap();
+                        }
+                        Err(_) => {
+                            writer.write_all("-failed to set key value pair\r\n".as_bytes()).unwrap();
+                        }
+                    }
                 }
                 Command::DbSize => {
-                    let map = map.lock().unwrap();
-                    let size = map.len();
+                    let size = bitcask
+                        .lock()
+                        .unwrap()
+                        .keys()
+                        .len();
+                    
                     writer
                         .write_all(format!(":{}\r\n", size).as_bytes())
                         .unwrap();
