@@ -1,7 +1,12 @@
 use crate::command::Command;
 
 use nom::{
-    branch::alt, bytes::streaming::{tag, tag_no_case}, character::{complete::line_ending, streaming::alphanumeric1}, multi::many0, sequence::terminated, IResult
+    branch::alt,
+    bytes::streaming::{tag, tag_no_case},
+    character::{complete::line_ending, streaming::alphanumeric1},
+    multi::many0,
+    sequence::terminated,
+    IResult,
 };
 
 fn parse_db_size(input: &[u8]) -> IResult<&[u8], Command> {
@@ -66,7 +71,15 @@ fn parse_quit(input: &[u8]) -> IResult<&[u8], Command> {
 
 pub fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
     terminated(
-        alt((parse_db_size, parse_get, parse_echo, parse_keys, parse_set, parse_ping, parse_quit)),
+        alt((
+            parse_db_size,
+            parse_get,
+            parse_echo,
+            parse_keys,
+            parse_set,
+            parse_ping,
+            parse_quit,
+        )),
         many0(line_ending),
     )(input)
 }
