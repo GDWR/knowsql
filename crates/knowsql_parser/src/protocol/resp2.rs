@@ -171,5 +171,16 @@ mod tests {
                 ])
             ))
         );
+        assert_eq!(
+            parse_data("*2\r\n$3\r\nGET\r\n$5\r\nhello\r\n\r\n*2\r\n$4\r\nECHO\r\n$20\r\n".as_bytes()),
+            Ok((
+                "\r\n*2\r\n$4\r\nECHO\r\n$20\r\n".as_bytes(),
+                Data::Array(vec![
+                    Data::BulkString{ data: "GET", length: 3 },
+                    Data::BulkString{ data: "hello", length: 5 },
+                ])
+            ))
+        )
+
     }
 }

@@ -7,10 +7,7 @@ use knowsql_parser::{
 };
 
 use std::{
-    collections::HashMap,
-    io::{BufWriter, Read, Write},
-    net::{TcpListener, TcpStream},
-    sync::{Arc, Mutex},
+    collections::HashMap, io::{BufWriter, Read, Write}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}
 };
 use tracing::{debug, error, info, span, trace, Level};
 
@@ -84,7 +81,6 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
             let (remaining, command) = match parse_command(&buffer[consumed..read]) {
                 Ok(c) => c,
                 Err(_) => {
-                    trace!("parsing did not complete, allowing buffer to refill");
                     break;
                 }
             };
@@ -115,6 +111,9 @@ fn handle_client(mut stream: TcpStream, map: Arc<Mutex<HashMap<String, String>>>
 
                     let resp = response.as_str().expect("constructed from static values");
                     writer.write_all(resp.as_bytes()).unwrap();
+                }
+                Command::Echo(message) => {
+                    writer.write_all(format!("+{}\r\n", message).as_bytes()).unwrap();
                 }
                 Command::Get(key) => {
                     let map = map.lock().unwrap();

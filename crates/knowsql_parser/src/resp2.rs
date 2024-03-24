@@ -17,6 +17,9 @@ pub fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
                 Ok((remaining, Command::Command(SubCommand::Docs)))
             }
             [resp2::Data::BulkString { data: "DBSIZE", .. }] => Ok((remaining, Command::DbSize)),
+            [resp2::Data::BulkString { data: "ECHO", .. }, resp2::Data::BulkString { data, .. }] => {
+                Ok((remaining, Command::Echo(data)))
+            }
             [resp2::Data::BulkString { data: "GET", .. }, resp2::Data::BulkString { data: key, .. }] => {
                 Ok((remaining, Command::Get(key)))
             }

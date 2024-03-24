@@ -1,15 +1,22 @@
 use crate::command::Command;
 
 use nom::{
-    branch::alt,
-    bytes::streaming::{tag, tag_no_case},
-    character::streaming::alphanumeric1,
-    IResult,
+    branch::alt, bytes::streaming::{tag, tag_no_case}, character::{complete::line_ending, streaming::alphanumeric1}, multi::many0, sequence::terminated, IResult
 };
 
 fn parse_db_size(input: &[u8]) -> IResult<&[u8], Command> {
     let (input, _) = tag_no_case("dbsize")(input)?;
     Ok((input, Command::DbSize))
+}
+
+fn parse_echo(input: &[u8]) -> IResult<&[u8], Command> {
+    let (input, _) = tag_no_case("echo")(input)?;
+    let (input, _) = tag(" ")(input)?;
+    let (input, message) = alphanumeric1(input)?;
+    Ok((
+        input,
+        Command::Echo(std::str::from_utf8(message).expect("message is valid utf8 string")),
+    ))
 }
 
 fn parse_get(input: &[u8]) -> IResult<&[u8], Command> {
@@ -53,12 +60,15 @@ fn parse_ping(input: &[u8]) -> IResult<&[u8], Command> {
 }
 
 fn parse_quit(input: &[u8]) -> IResult<&[u8], Command> {
-    let (input, _) = tag_no_case("exit")(input)?;
+    let (input, _) = tag_no_case("quit")(input)?;
     Ok((input, Command::Quit))
 }
 
 pub fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
-    alt((parse_db_size, parse_get, parse_keys, parse_set, parse_ping, parse_quit))(input)
+    terminated(
+        alt((parse_db_size, parse_get, parse_echo, parse_keys, parse_set, parse_ping, parse_quit)),
+        many0(line_ending),
+    )(input)
 }
 
 pub fn try_parse_command(input: &[u8]) -> Option<Command> {
