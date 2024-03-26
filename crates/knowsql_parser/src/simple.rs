@@ -34,13 +34,19 @@ fn parse_get(input: &[u8]) -> IResult<&[u8], Command> {
     ))
 }
 
-fn parse_keys(input: &[u8]) -> IResult<&[u8], Command> {
+fn parse_keys_no_pattern(input: &[u8]) -> IResult<&[u8], Command> {
     let (input, _) = tag_no_case("keys")(input)?;
+    Ok((input, Command::Keys(None)))
+}
+
+fn parse_keys_with_pattern(input: &[u8]) -> IResult<&[u8], Command> {
+    let (input, _) = tag_no_case("keys")(input)?;
+
     let (input, _) = tag(" ")(input)?;
     let (input, pattern) = alphanumeric1(input)?;
     Ok((
         input,
-        Command::Keys(std::str::from_utf8(pattern).expect("pattern is valid utf8 string")),
+        Command::Keys(Some(std::str::from_utf8(pattern).expect("pattern is valid utf8 string"))),
     ))
 }
 
@@ -75,7 +81,8 @@ pub fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
             parse_db_size,
             parse_get,
             parse_echo,
-            parse_keys,
+            parse_keys_with_pattern,
+            parse_keys_no_pattern,
             parse_set,
             parse_ping,
             parse_quit,

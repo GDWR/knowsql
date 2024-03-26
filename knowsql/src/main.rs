@@ -124,7 +124,22 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                         None => writer.write_all(b"$-1\r\n").unwrap(),
                     }
                 }
-                Command::Keys(pattern) => {
+                Command::Keys(None) => {
+                    let keys = bitcask.lock().unwrap().keys();
+                    let response = Data::Array(
+                        keys.iter()
+                            .map(|key| Data::BulkString(key))
+                            .collect(),
+                    );
+
+                    match response.as_str() {
+                        Some(resp) => writer.write_all(resp.as_bytes()).unwrap(),
+                        None => {
+                            writer.write_all(b"-failed to list keys\r\n").unwrap();
+                        }
+                    }
+                }
+                Command::Keys(Some(pattern)) => {
                     let re = match Regex::new(pattern) {
                         Ok(re) => re,
                         Err(_) => {
@@ -144,8 +159,6 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     );
 
                     let resp = response.as_str().expect("constructed from static values");
-
-                    trace!(data = ?response, resp = resp, "sending response");
                     writer.write_all(resp.as_bytes()).unwrap();
                 }
                 Command::Set(key, value) => match bitcask.lock().unwrap().put(key, value) {

@@ -24,8 +24,9 @@ pub fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
             [resp2::Data::BulkString("SET"), resp2::Data::BulkString(key), resp2::Data::BulkString(value)] => {
                 Ok((remaining, Command::Set(key, value)))
             }
+            [resp2::Data::BulkString("KEYS")] => Ok((remaining, Command::Keys(None))),
             [resp2::Data::BulkString("KEYS"), resp2::Data::BulkString(pattern)] => {
-                Ok((remaining, Command::Keys(pattern)))
+                Ok((remaining, Command::Keys(Some(pattern))))
             }
             [resp2::Data::BulkString("PING")] => Ok((remaining, Command::Ping)),
             [resp2::Data::BulkString("QUIT")] => Ok((remaining, Command::Quit)),
