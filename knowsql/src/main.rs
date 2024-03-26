@@ -126,11 +126,8 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                 }
                 Command::Keys(None) => {
                     let keys = bitcask.lock().unwrap().keys();
-                    let response = Data::Array(
-                        keys.iter()
-                            .map(|key| Data::BulkString(key))
-                            .collect(),
-                    );
+                    let response =
+                        Data::Array(keys.iter().map(|key| Data::BulkString(key)).collect());
 
                     match response.as_str() {
                         Some(resp) => writer.write_all(resp.as_bytes()).unwrap(),
@@ -139,28 +136,25 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                         }
                     }
                 }
-                Command::Keys(Some(pattern)) => {
-                    let re = match Regex::new(pattern) {
-                        Ok(re) => re,
-                        Err(_) => {
-                            trace!(pattern = pattern, "invalid regex pattern");
-                            writer.write_all(b"-invalid regex pattern\r\n").unwrap();
-                            writer.flush().unwrap();
-                            continue;
-                        }
-                    };
+                Command::Keys(Some(pattern)) => match Regex::new(pattern) {
+                    Ok(re) => {
+                        let keys = bitcask.lock().unwrap().keys();
+                        let response = Data::Array(
+                            keys.iter()
+                                .filter(|key| re.is_match(key))
+                                .map(|key| Data::BulkString(key))
+                                .collect(),
+                        );
 
-                    let keys = bitcask.lock().unwrap().keys();
-                    let response = Data::Array(
-                        keys.iter()
-                            .filter(|key| re.is_match(key))
-                            .map(|key| Data::BulkString(key))
-                            .collect(),
-                    );
-
-                    let resp = response.as_str().expect("constructed from static values");
-                    writer.write_all(resp.as_bytes()).unwrap();
-                }
+                        let resp = response.as_str().expect("constructed from static values");
+                        writer.write_all(resp.as_bytes()).unwrap();
+                    }
+                    Err(_) => {
+                        trace!(pattern = pattern, "invalid regex pattern");
+                        writer.write_all(b"-invalid regex pattern\r\n").unwrap();
+                        writer.flush().unwrap();
+                    }
+                },
                 Command::Set(key, value) => match bitcask.lock().unwrap().put(key, value) {
                     Ok(_) => {
                         writer.write_all(b"+OK\r\n").unwrap();

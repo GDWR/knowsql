@@ -46,7 +46,9 @@ fn parse_keys_with_pattern(input: &[u8]) -> IResult<&[u8], Command> {
     let (input, pattern) = alphanumeric1(input)?;
     Ok((
         input,
-        Command::Keys(Some(std::str::from_utf8(pattern).expect("pattern is valid utf8 string"))),
+        Command::Keys(Some(
+            std::str::from_utf8(pattern).expect("pattern is valid utf8 string"),
+        )),
     ))
 }
 
