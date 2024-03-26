@@ -4,7 +4,7 @@ pub enum Command<'a> {
     Command(SubCommand),
     Echo(&'a str),
     Get(&'a str),
-    Keys(&'a str),
+    Keys(Option<&'a str>),
     Set(&'a str, &'a str),
     Ping,
     Quit,
