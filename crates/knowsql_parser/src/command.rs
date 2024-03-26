@@ -25,7 +25,7 @@ impl Command<'_> {
             ),
             ("ECHO", &["Returns message."]),
             ("GET", &["Get the value of key."]),
-            ("KEYS", &["Get all keys matching pattern."]),
+            ("KEYS", &["Get all keys matching a regex pattern."]),
             ("SET", &["Set the value of key."]),
             ("PING", &["Pong."]),
             ("QUIT", &["Ask the server to close the connection."]),
