@@ -6,6 +6,7 @@ use knowsql_parser::{
     parse_command,
     protocol::resp2::Data,
 };
+use regex::Regex;
 
 use std::{
     io::{BufWriter, Read, Write},
@@ -123,11 +124,20 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                         None => writer.write_all(b"$-1\r\n").unwrap(),
                     }
                 }
-                Command::Keys(_pattern) => {
-                    let keys = bitcask.lock().unwrap().keys();
+                Command::Keys(pattern) => {
+                    let re = match Regex::new(pattern) {
+                        Ok(re) => re,
+                        Err(_) => {
+                            trace!(pattern = pattern, "invalid regex pattern");
+                            writer.write_all(b"-invalid regex pattern\r\n").unwrap();
+                            writer.flush().unwrap();
+                            continue;
+                        }
+                    };
 
+                    let keys = bitcask.lock().unwrap().keys();
                     let response =
-                        Data::Array(keys.iter().map(|key| Data::BulkString(key)).collect());
+                        Data::Array(keys.iter().filter(|key| re.is_match(key)).map(|key| Data::BulkString(key)).collect());
 
                     let resp = response.as_str().expect("constructed from static values");
 
