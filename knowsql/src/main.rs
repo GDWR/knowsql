@@ -136,8 +136,12 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                     };
 
                     let keys = bitcask.lock().unwrap().keys();
-                    let response =
-                        Data::Array(keys.iter().filter(|key| re.is_match(key)).map(|key| Data::BulkString(key)).collect());
+                    let response = Data::Array(
+                        keys.iter()
+                            .filter(|key| re.is_match(key))
+                            .map(|key| Data::BulkString(key))
+                            .collect(),
+                    );
 
                     let resp = response.as_str().expect("constructed from static values");
 
