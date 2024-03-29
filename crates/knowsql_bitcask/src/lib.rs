@@ -6,22 +6,14 @@ use std::path::PathBuf;
 
 use chrono::Utc;
 
+mod entry;
+use entry::Entry;
+
 #[derive(Debug)]
 pub struct BitCask {
     data_dir: PathBuf,
     active_file_id: u32,
     key_dir: HashMap<String, Key>,
-}
-
-/// A entry that will exist within a data file
-#[derive(Clone, Debug)]
-struct Entry<'a> {
-    crc: u32,
-    timestamp: i64,
-    key_size: u32,
-    value_size: u32,
-    key: &'a str,
-    value: &'a str,
 }
 
 /// A key to locate a value within a data file
@@ -35,18 +27,7 @@ struct Key {
     timestamp: i64,
 }
 
-impl Entry<'_> {
-    fn serialize(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-        buf.extend_from_slice(&self.crc.to_be_bytes());
-        buf.extend_from_slice(&self.timestamp.to_be_bytes());
-        buf.extend_from_slice(&self.key_size.to_be_bytes());
-        buf.extend_from_slice(&self.value_size.to_be_bytes());
-        buf.extend_from_slice(self.key.as_bytes());
-        buf.extend_from_slice(self.value.as_bytes());
-        buf
-    }
-}
+
 
 impl BitCask {
     fn get_active_file(&self) -> PathBuf {
