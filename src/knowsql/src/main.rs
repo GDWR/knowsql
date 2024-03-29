@@ -116,7 +116,7 @@ fn handle_client(mut stream: TcpStream, bitcask: Arc<Mutex<BitCask>>) {
                         .unwrap();
                 }
                 Command::Get(key) => {
-                    let bitcask = bitcask.lock().unwrap();
+                    let mut bitcask = bitcask.lock().unwrap();
                     match bitcask.get(key) {
                         Some(value) => writer
                             .write_all(format!("+{}\r\n", value).as_bytes())
