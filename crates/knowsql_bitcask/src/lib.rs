@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
+use std::mem::size_of;
 use std::path::PathBuf;
 
 use chrono::Utc;
@@ -51,6 +52,42 @@ impl BitCask {
     fn get_active_file(&self) -> PathBuf {
         self.data_dir.join(format!("{}.data", self.active_file_id))
     }
+    fn build_key_dir(&mut self) {
+        let mut file = File::open(self.get_active_file()).unwrap();
+
+        loop {
+            const HEADER_SIZE: usize =
+                size_of::<u32>() + size_of::<i64>() + size_of::<u32>() + size_of::<u32>();
+            let mut buf = [0; HEADER_SIZE];
+
+            match file.read_exact(&mut buf) {
+                Ok(_) => (),
+                Err(_) => break,
+            }
+
+            let _crc = u32::from_be_bytes(buf[..4].try_into().unwrap());
+            let timestamp = i64::from_be_bytes(buf[4..12].try_into().unwrap());
+            let key_size = u32::from_be_bytes(buf[12..16].try_into().unwrap());
+            let value_size = u32::from_be_bytes(buf[16..20].try_into().unwrap());
+            let key = &mut vec![0; key_size as usize];
+            file.read_exact(key).unwrap();
+
+            // Skip over value
+            let pos = file.stream_position().expect("we just read from the file");
+            file.seek(std::io::SeekFrom::Current(value_size as i64))
+                .expect("content is not malformed");
+
+            self.key_dir.insert(
+                String::from_utf8(key.to_vec()).unwrap(),
+                Key {
+                    file_id: self.active_file_id,
+                    value_size: value_size,
+                    value_position: pos,
+                    timestamp: timestamp,
+                },
+            );
+        }
+    }
 
     /// Open a BitCask store
     ///   if provided data_dir does not exist it will be created or an error will be returned
@@ -59,11 +96,21 @@ impl BitCask {
             std::fs::create_dir(&data_dir)?;
         }
 
-        Ok(BitCask {
+        let mut cask = BitCask {
             data_dir: data_dir,
             active_file_id: 0,
             key_dir: HashMap::new(),
-        })
+        };
+
+        // ensure active data file exists
+        let active_file = cask.get_active_file();
+        if !active_file.exists() {
+            File::create(&active_file)?;
+        }
+
+        cask.build_key_dir();
+
+        Ok(cask)
     }
     /// Get a value from the store
     pub fn get(&self, key: &str) -> Option<String> {

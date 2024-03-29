@@ -38,15 +38,19 @@
           inherit pkgs;
           knowsql = self;
         };
-        remote = pkgs.callPackage ./tests/remote.nix {
-          inherit pkgs;
-          knowsql = self;
-        };
         over9000 = pkgs.callPackage ./tests/over9000.nix {
           inherit pkgs;
           knowsql = self;
         };
         pipelined = pkgs.callPackage ./tests/pipelined.nix {
+          inherit pkgs;
+          knowsql = self;
+        };
+	remote = pkgs.callPackage ./tests/remote.nix {
+          inherit pkgs;
+          knowsql = self;
+        };
+	restart = pkgs.callPackage ./tests/restart.nix {
           inherit pkgs;
           knowsql = self;
         };
