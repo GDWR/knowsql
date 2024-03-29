@@ -7,4 +7,5 @@ documentation.workspace = true
 
 [dependencies]
 nom = { workspace = true }
-tracing = "0.1.40"
+tracing = { workspace = true } 
+
