@@ -22,7 +22,7 @@ pub fn parse_command(input: &[u8]) -> IResult<&[u8], Command> {
                 Ok((remaining, Command::Get(key)))
             }
             [resp2::Data::BulkString("SET"), resp2::Data::BulkString(key), resp2::Data::BulkString(value)] => {
-                Ok((remaining, Command::Set(key, value)))
+                Ok((remaining, Command::Set(key, value.as_bytes())))
             }
             [resp2::Data::BulkString("KEYS")] => Ok((remaining, Command::Keys(None))),
             [resp2::Data::BulkString("KEYS"), resp2::Data::BulkString(pattern)] => {

@@ -62,7 +62,7 @@ fn parse_set(input: &[u8]) -> IResult<&[u8], Command> {
         input,
         Command::Set(
             std::str::from_utf8(key).expect("key is valid utf8 string"),
-            std::str::from_utf8(value).expect("value is valid utf8 string"),
+            value,
         ),
     ))
 }

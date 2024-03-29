@@ -106,7 +106,7 @@ impl BitCask {
         Some(String::from_utf8(buf).unwrap())
     }
     /// Put a key-value pair into the store
-    pub fn put(&mut self, key: &str, value: &str) -> std::io::Result<()> {
+    pub fn put(&mut self, key: &str, value: &[u8]) -> std::io::Result<()> {
         let entry = Entry {
             crc: 0,
             timestamp: Utc::now().timestamp(),

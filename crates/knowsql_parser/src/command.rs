@@ -5,7 +5,7 @@ pub enum Command<'a> {
     Echo(&'a str),
     Get(&'a str),
     Keys(Option<&'a str>),
-    Set(&'a str, &'a str),
+    Set(&'a str, &'a[u8]),
     Ping,
     Quit,
 }
