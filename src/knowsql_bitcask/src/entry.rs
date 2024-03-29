@@ -7,7 +7,7 @@ pub struct Entry<'a> {
     pub key_size: u32,
     pub value_size: u32,
     pub key: &'a str,
-    pub value: &'a[u8],
+    pub value: &'a [u8],
 }
 
 impl Entry<'_> {
@@ -22,4 +22,3 @@ impl Entry<'_> {
         buf
     }
 }
-

@@ -27,8 +27,6 @@ struct Key {
     timestamp: i64,
 }
 
-
-
 impl BitCask {
     fn get_active_file(&self) -> PathBuf {
         self.data_dir.join(format!("{}.data", self.active_file_id))
