@@ -106,7 +106,6 @@ impl BitCask {
     /// Put a key-value pair into the store
     pub fn put(&mut self, key: &str, value: &[u8]) -> std::io::Result<()> {
         let entry = Entry {
-            crc: 0,
             timestamp: Utc::now().timestamp(),
             key_size: key.len() as u32,
             value_size: value.len() as u32,
