@@ -1,13 +1,13 @@
 { pkgs ? import <nixpkgs> { }, ... }:
 pkgs.buildDotnetModule rec {
   pname = "garnet-benchmark";
-  version = "1.0.0";
+  version = "1.0.2";
 
   src = pkgs.fetchFromGitHub {
     owner = "microsoft";
     repo = "garnet";
-    rev = "v1.0.0";
-    sha256 = "sha256-Th9UyIsiGUpmpLVxfKQaDcFEKR7i4PoEnGN1A+lFcC0=";
+    rev = "v1.0.2";
+    sha256 = "sha256-kkswchMnXMoVzgyvweJlhOM+JfPzMfBaP0ZlDxmw29E=";
   };
 
   projectFile = "benchmark/Resp.benchmark/Resp.benchmark.csproj";
